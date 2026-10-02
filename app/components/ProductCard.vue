@@ -16,6 +16,7 @@
         :alt="product.name"
         class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         loading="lazy"
+          @error="(e) => ((e.target as HTMLImageElement).src = 'https://placehold.co/600x400/f1f5f9/475569?text=' + encodeURIComponent(product.name))"
       />
     </NuxtLink>
 
@@ -61,18 +62,16 @@
         <button
           type="button"
           :disabled="!product.inStock"
-          class="flex-shrink-0 flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all"
+          class="flex-shrink-0 flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition-all"
           :class="[
             !product.inStock
               ? 'cursor-not-allowed bg-slate-100 text-slate-400'
-              : isJustAdded
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95 shadow-sm'
+              : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
           ]"
           @click.stop="handleAddToCart"
         >
-          <span v-if="isJustAdded">✓ Đã thêm</span>
-          <span v-else-if="!product.inStock">Hết hàng</span>
+          <IconCart class="h-3.5 w-3.5" />
+          <span v-if="!product.inStock">Hết hàng</span>
           <span v-else>+ Giỏ hàng</span>
         </button>
       </div>
@@ -90,8 +89,6 @@ const props = defineProps<{
 
 const { formatPrice } = useFormatPrice();
 const { addToCart } = useCart();
-
-const isJustAdded = ref(false);
 
 const formatCategory = (cat: string) => {
   const map: Record<string, string> = {
@@ -112,10 +109,5 @@ const handleAddToCart = () => {
     price: props.product.price,
     image: props.product.image,
   });
-
-  isJustAdded.value = true;
-  setTimeout(() => {
-    isJustAdded.value = false;
-  }, 1200);
 };
 </script>

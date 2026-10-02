@@ -97,7 +97,7 @@
       </div>
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         <ProductCard
-          v-for="product in filteredProducts"
+          v-for="product in  paginatedProducts"
           :key="product.id"
           :product="product"
         />
@@ -116,10 +116,53 @@
       </button>
     </div>
 
+
+    <!-- Thanh phân trang (Pagination Bar) -->
+<div v-if="totalPages > 1" class="mt-10 flex items-center justify-center gap-2">
+  <!-- Nút Trước -->
+  <button
+    type="button"
+    :disabled="currentPage === 1"
+    class="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+    @click="goToPage(currentPage - 1)"
+  >
+    ← Trước
+  </button>
+
+  <!-- Các nút số trang -->
+  <button
+    v-for="page in totalPages"
+    :key="page"
+    type="button"
+    class="h-9 w-9 rounded-xl text-xs font-bold transition shadow-sm"
+    :class="[
+      currentPage === page
+        ? 'bg-blue-600 text-white'
+        : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+    ]"
+    @click="goToPage(page)"
+  >
+    {{ page }}
+  </button>
+
+  <!-- Nút Sau -->
+  <button
+    type="button"
+    :disabled="currentPage === totalPages"
+    class="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+    @click="goToPage(currentPage + 1)"
+  >
+    Sau →
+  </button>
+</div>
+
+
   </div>
 </template>
 
 <script setup lang="ts">
+
+
 import type { Product } from '~/types/product';
 
 // SEO Meta
@@ -180,6 +223,35 @@ const filteredProducts = computed(() => {
   }
 
   return list;
+});
+
+
+//  Khai báo state phân trang
+const currentPage = ref(1);
+const itemsPerPage = ref(8); // 8 sản phẩm mỗi trang 
+
+
+
+//  Tính tổng số trang
+const totalPages = computed(() => {
+  return Math.ceil(filteredProducts.value.length / itemsPerPage.value) || 1;
+});
+//  Mảng sản phẩm sau khi phân trang để hiển thị lên UI
+const paginatedProducts = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return filteredProducts.value.slice(start, end);
+});
+//  Hàm chuyển trang và cuộn mượt lên đầu danh sách
+const goToPage = (page: number) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+    window.scrollTo({ top: 200, behavior: 'smooth' });
+  }
+};
+// Reset về trang 1 khi lọc hoặc tìm kiếm
+watch([selectedCategory, searchQuery, sortBy], () => {
+  currentPage.value = 1;
 });
 
 const resetFilters = () => {
