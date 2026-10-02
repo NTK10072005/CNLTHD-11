@@ -4,7 +4,7 @@
     <main
       style="
         flex: 1;
-        max-width: 1000px;
+        max-width: 1280px;
         margin: 0 auto;
         width: 100%;
         padding: 2rem 1rem;
