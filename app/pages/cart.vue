@@ -2,8 +2,17 @@
 <template>
   <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
     <div class="mb-8">
+      <!-- Breadcrumb điều hướng -->
+      <nav class="mb-6 flex items-center gap-2 text-xs text-slate-500">
+        <NuxtLink to="/" class="transition hover:text-blue-600">Trang chủ</NuxtLink>
+        <span>/</span>
+        <NuxtLink to="/products" class="transition hover:text-blue-600">Sản phẩm</NuxtLink>
+        <span>/</span>
+        <span class="font-medium text-slate-800">Giỏ hàng</span>
+      </nav>
+
       <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">Giỏ Hàng Của Bạn</h1>
-      <p class="mt-1 text-sm text-slate-500">Xem lại các sản phẩm bạn đã chọn trước khi đặt hàng.</p>
+      <p class="mt-1 text-sm text-slate-500">Các sản phẩm bạn đã thêm vào giỏ hàng</p>
     </div>
 
     <!-- ClientOnly bảo vệ tránh lỗi Hydration Mismatch từ localStorage -->
@@ -11,7 +20,7 @@
       <!-- Trường hợp Giỏ hàng trống -->
       <div v-if="cart.length === 0" class="rounded-2xl border border-slate-200 bg-slate-50 p-12 text-center">
         <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-          <IconCart class="h-8 w-8" />
+          <img src="/icon/cart.svg" alt="Giỏ hàng" class="h-10 w-10" />
         </div>
         <h2 class="text-lg font-bold text-slate-800">Giỏ hàng của bạn đang trống</h2>
         <p class="mt-1 text-xs text-slate-500">Hãy dạo quanh cửa hàng để chọn những món đồ công nghệ yêu thích nhé!</p>
@@ -23,7 +32,7 @@
         </NuxtLink>
       </div>
 
-      <!-- Trường hợp Có sản phẩm -->
+      <!-- Trường hợp có sản phẩm -->
       <div v-else class="grid grid-cols-1 gap-8 lg:grid-cols-12">
         <!-- Bảng danh sách sản phẩm (8 cột) -->
         <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-8">
@@ -35,7 +44,12 @@
             <li v-for="item in cart" :key="item.id" class="flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
               <!-- Ảnh -->
               <NuxtLink :to="`/products/${item.id}`" class="h-20 w-20 flex-shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                <img :src="item.image" :alt="item.name" class="h-full w-full object-cover" />
+                <img
+                  :src="item.image"
+                  :alt="item.name"
+                  class="h-full w-full object-cover"
+                  @error="(e) => ((e.target as HTMLImageElement).src = '/icon/placeholder.svg')"
+                />
               </NuxtLink>
 
               <!-- Thông tin -->
@@ -84,10 +98,17 @@
             </li>
           </ul>
 
-          <div class="border-t border-slate-100 p-4 text-right">
+          <div class="flex items-center justify-between border-t border-slate-100 p-4">
+            <NuxtLink
+              to="/products"
+              class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 transition hover:text-blue-800"
+            >
+              ← Tiếp tục mua hàng
+            </NuxtLink>
+
             <button
               type="button"
-              class="text-xs font-medium text-slate-500 hover:text-rose-600"
+              class="text-xs font-medium text-slate-500 transition hover:text-rose-600"
               @click="clearCart"
             >
               Xóa toàn bộ giỏ hàng
@@ -140,7 +161,7 @@
 
 <script setup lang="ts">
 useSeoMeta({
-  title: 'Giỏ Hàng Của Bạn | Cửa Hàng Nuxt 4',
+  title: 'Giỏ Hàng Của Bạn',
 });
 
 const { cart, updateQuantity, removeFromCart, clearCart, totalItems, totalPrice } = useCart();

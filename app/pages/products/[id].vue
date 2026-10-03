@@ -10,7 +10,7 @@
       <span class="font-medium text-slate-800">{{ product.name }}</span>
     </nav>
 
-    <!-- KHỐI 1:MUA HÀNG  -->
+    <!-- KHỐI 1: MUA HÀNG -->
     <div class="grid grid-cols-1 gap-10 lg:grid-cols-12">
       <!-- Cột trái: Ảnh sản phẩm (5 cột) -->
       <div class="lg:col-span-5">
@@ -70,7 +70,7 @@
               <button
                 type="button"
                 :disabled="quantity <= 1 || !product.inStock"
-                class="px-3.5 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                class="px-3.5 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                 @click="quantity--"
               >
                 -
@@ -79,7 +79,7 @@
               <button
                 type="button"
                 :disabled="!product.inStock"
-                class="px-3.5 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                class="px-3.5 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                 @click="quantity++"
               >
                 +
@@ -93,7 +93,7 @@
               class="flex items-center justify-center gap-2 rounded-xl border border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 shadow-sm transition hover:bg-blue-50 active:scale-95 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 sm:flex-initial"
               @click="handleAddToCart"
             >
-              <IconCart class="h-4 w-4" />
+              <img src="/icon/cart.svg" alt="Giỏ hàng" class="h-4 w-4" />
               <span>Thêm vào giỏ hàng</span>
             </button>
 
@@ -108,12 +108,10 @@
             </button>
           </div>
         </div>
-
-    
       </div>
     </div>
 
-    <!-- KHỐI 2: BẢNG THÔNG SỐ KỸ THUẬT  -->
+    <!-- KHỐI 2: BẢNG THÔNG SỐ KỸ THUẬT -->
     <div class="mt-12 overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" v-if="product.specs">
       <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
         <h2 class="text-lg font-bold text-slate-900">Thông số kỹ thuật chi tiết</h2>
@@ -135,29 +133,29 @@
     </div>
 
     <!-- Toast Thông báo thêm giỏ hàng thành công -->
- 
-<Transition
-  enter-active-class="transform transition duration-300 ease-out"
-  enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:translate-x-4"
-  enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
-  leave-active-class="transition duration-200 ease-in"
-  leave-from-class="opacity-100"
-  leave-to-class="opacity-0"
->
-  <div
-    v-if="showToast"
-    class="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-sm"
-  >
-    <div class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-600">
-      ✓
-    </div>
-    <div class="text-xs">
-      <p class="font-bold text-slate-800">Đã thêm vào giỏ hàng!</p>
-      <p class="text-[11px] text-slate-500 line-clamp-1">{{ product.name }} (x{{ quantity }})</p>
-    </div>
-  </div>
-</Transition>
-
+    <Transition
+      enter-active-class="transform transition duration-300 ease-out"
+      enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:translate-x-4"
+      enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="cartToast.show"
+        class="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-sm"
+      >
+        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-600">
+          ✓
+        </div>
+        <div class="text-xs">
+          <p class="font-bold text-slate-800">{{ cartToast.message }}</p>
+          <p v-if="cartToast.subMessage" class="text-[11px] text-slate-500 line-clamp-1">
+            {{ cartToast.subMessage }}
+          </p>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -165,24 +163,22 @@
 import type { Product } from '~/types/product';
 
 const route = useRoute();
-const idParam = route.params.id;
-
 const { formatPrice } = useFormatPrice();
-const { addToCart } = useCart();
+const { addToCart, cartToast } = useCart();
 
-// Fetch dữ liệu từ API
-const { data: product, error } = await useFetch<Product>(`/api/products/${idParam}`);
+// Fetch dữ liệu từ API (truyền callback phản ứng theo chuẩn Nuxt 4)
+const { data: product, error } = await useFetch<Product>(() => `/api/products/${route.params.id}`);
 
-// Xử lý lỗi 404
+// Xử lý lỗi 404 nếu không tìm thấy sản phẩm
 if (error.value || !product.value) {
   throw createError({
     statusCode: 404,
-    statusMessage: `Sản phẩm #${idParam} không tồn tại`,
+    statusMessage: `Sản phẩm #${route.params.id} không tồn tại`,
     fatal: true,
   });
 }
 
-// SEO Meta động
+// SEO Meta động theo sản phẩm
 useSeoMeta({
   title: () => `${product.value?.name} | Chi Tiết Sản Phẩm`,
   description: () => product.value?.description,
@@ -190,8 +186,6 @@ useSeoMeta({
 });
 
 const quantity = ref(1);
-const showToast = ref(false);
-let toastTimer: any = null;
 
 const formatCategory = (cat: string) => {
   const map: Record<string, string> = {
@@ -205,7 +199,7 @@ const formatCategory = (cat: string) => {
 
 const onImageError = (e: Event) => {
   const target = e.target as HTMLImageElement;
-  target.src = `https://placehold.co/600x600/f1f5f9/475569?text=${encodeURIComponent(product.value?.name || 'Product')}`;
+  target.src = '/icon/placeholder.svg';
 };
 
 const handleAddToCart = () => {
@@ -220,12 +214,6 @@ const handleAddToCart = () => {
     },
     quantity.value
   );
-
-  showToast.value = true;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    showToast.value = false;
-  }, 2500);
 };
 
 const handleBuyNow = () => {
