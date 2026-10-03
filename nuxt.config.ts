@@ -7,7 +7,8 @@ export default defineNuxtConfig({
   },
 
   routeRules: {
-    "/products/**": { swr: 3600 }, // SWR Caching Tầng 3
+    "/products/**": { swr: 3600 },
+    // SWR Caching Tầng 3
   },
 
   devtools: { enabled: true },
