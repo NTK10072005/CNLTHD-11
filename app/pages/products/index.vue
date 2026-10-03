@@ -40,11 +40,12 @@
             type="text"
             placeholder="Tìm theo tên sản phẩm..."
             class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pr-8 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-60"
+            @input="clearHeaderSearch"
           />
           <button
             v-if="searchQuery"
             class="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600"
-            @click="searchQuery = ''"
+            @click="searchQuery = ''; clearHeaderSearch()"
           >
             X 
           </button>
@@ -122,6 +123,10 @@
 <script setup lang="ts">
 import type { Product } from '~/types/product';
 
+const route = useRoute()
+const initialSearch = typeof route.query.search === 'string' ? route.query.search : ''
+const headerSearchTerm = ref(initialSearch)
+
 // SEO Meta
 useSeoMeta({
   title: 'Danh Sách Sản Phẩm | Cửa hàng bán máy tính và đồ điện tử',
@@ -151,7 +156,7 @@ const categories = [
 ];
 
 const selectedCategory = ref('all');
-const searchQuery = ref('');
+const searchQuery = ref(initialSearch);
 const sortBy = ref('default');
 
 const filteredProducts = computed(() => {
@@ -182,9 +187,30 @@ const filteredProducts = computed(() => {
   return list;
 });
 
+watch(() => route.query.search, (value) => {
+  const query = typeof value === 'string' ? value : ''
+  searchQuery.value = query
+  headerSearchTerm.value = query
+});
+
+watch([status, filteredProducts], ([currentStatus, matches]) => {
+  if (currentStatus === 'success' && headerSearchTerm.value.trim() && matches.length === 0) {
+    navigateTo({ path: '/error', query: { search: headerSearchTerm.value } })
+  }
+});
+
+if (initialSearch && status.value === 'success' && filteredProducts.value.length === 0) {
+  await navigateTo({ path: '/error', query: { search: initialSearch } })
+}
+
+function clearHeaderSearch() {
+  headerSearchTerm.value = ''
+}
+
 const resetFilters = () => {
   selectedCategory.value = 'all';
   searchQuery.value = '';
+  clearHeaderSearch();
   sortBy.value = 'default';
 };
 </script>
