@@ -21,8 +21,28 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Vui lòng điền đầy đủ thông tin.' })
   }
 
-  if (username.length < 3 || password.length < 8) {
-    throw createError({ statusCode: 400, statusMessage: 'Username cần ít nhất 3 ký tự và mật khẩu cần ít nhất 8 ký tự.' })
+  if (name.length < 2 || name.length > 60 || !/^[\p{L}\p{M}]+(?:[ '\u2019-][\p{L}\p{M}]+)*$/u.test(name)) {
+    throw createError({ statusCode: 400, statusMessage: 'Họ tên cần 2-60 ký tự, chỉ gồm chữ và dấu cách.' })
+  }
+
+  if (!/^[a-zA-Z0-9._]{3,20}$/.test(username)) {
+    throw createError({ statusCode: 400, statusMessage: 'Tên đăng nhập gồm 3-20 ký tự: chữ không dấu, số, dấu chấm hoặc gạch dưới.' })
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    throw createError({ statusCode: 400, statusMessage: 'Email không đúng định dạng.' })
+  }
+
+  if (!/^0[0-9]{9}$/.test(phone)) {
+    throw createError({ statusCode: 400, statusMessage: 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0.' })
+  }
+
+  if (address.length > 200) {
+    throw createError({ statusCode: 400, statusMessage: 'Địa chỉ không được vượt quá 200 ký tự.' })
+  }
+
+  if (password.length < 8) {
+    throw createError({ statusCode: 400, statusMessage: 'Mật khẩu cần ít nhất 8 ký tự.' })
   }
 
   const alreadyRegistered = mockUsers.some(
