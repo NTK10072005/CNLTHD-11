@@ -1,48 +1,65 @@
 export interface AuthUser {
-	id: number
-	username: string
-	email: string
-	name: string
-	phone?: string
-	address?: string
-	role: 'user' | 'admin'
+  id: number;
+  username: string;
+  email: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  role: "user" | "admin";
 }
 
 export interface RegisterDetails {
-	username: string
-	email: string
-	name: string
-	phone: string
-	address: string
-	password: string
+  username: string;
+  email: string;
+  name: string;
+  phone: string;
+  address: string;
+  password: string;
 }
 
 export function useAuth() {
-	const user = useState<AuthUser | null>('auth-user', () => null)
+  const authCookie = useCookie<AuthUser | null>("auth-user", {
+    default: () => null,
+  });
 
-	async function login(username: string, password: string) {
-		const response = await $fetch<{ user: AuthUser }>('/api/auth/login', {
-			method: 'POST',
-			body: { username, password },
-		})
+  const user = useState<AuthUser | null>("auth-user", () => authCookie.value);
 
-		user.value = response.user
-		return response.user
-	}
+  async function login(username: string, password: string) {
+    const response = await $fetch<{ user: AuthUser }>("/api/auth/login", {
+      method: "POST",
+      body: {
+        username,
+        password,
+      },
+    });
 
-	async function registerAccount(details: RegisterDetails) {
-		const response = await $fetch<{ user: AuthUser }>('/api/auth/register', {
-			method: 'POST',
-			body: details,
-		})
+    user.value = response.user;
+    authCookie.value = response.user;
 
-		user.value = response.user
-		return response.user
-	}
+    return response.user;
+  }
 
-	function logout() {
-		user.value = null
-	}
+  async function registerAccount(details: RegisterDetails) {
+    const response = await $fetch<{ user: AuthUser }>("/api/auth/register", {
+      method: "POST",
+      body: details,
+    });
 
-	return { user, login, registerAccount, logout }
+    user.value = response.user;
+    authCookie.value = response.user;
+
+    return response.user;
+  }
+
+  function logout() {
+    user.value = null;
+    authCookie.value = null;
+  }
+
+  return {
+    user,
+    login,
+    registerAccount,
+    logout,
+  };
 }

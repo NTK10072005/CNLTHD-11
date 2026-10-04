@@ -1,7 +1,8 @@
 <template>
-  <div style="display: flex; min-height: 100vh">
+  <div class="flex min-h-screen bg-slate-100">
     <AdminSidebar />
-    <main style="flex: 1; padding: 2rem; background: #f8fafc">
+
+    <main class="min-w-0 flex-1 p-8">
       <slot />
     </main>
   </div>
