@@ -157,33 +157,51 @@
       </div>
     </Transition>
   </div>
+
+  <!-- Giao diện khi không tìm thấy sản phẩm -->
+  <div v-else class="mx-auto max-w-3xl px-4 py-20 text-center">
+    <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+      <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    </div>
+    <h1 class="text-2xl font-extrabold text-slate-900 sm:text-3xl">
+      Không tìm thấy sản phẩm
+    </h1>
+    <p class="mt-2 text-sm text-slate-500">
+      Sản phẩm này không tồn tại hoặc đã ngừng kinh doanh.
+    </p>
+    <div class="mt-8 flex items-center justify-center gap-4">
+      <NuxtLink
+        to="/products"
+        class="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+      >
+        ← Quay lại danh mục sản phẩm
+      </NuxtLink>
+      <NuxtLink
+        to="/"
+        class="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+      >
+        Về trang chủ
+      </NuxtLink>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import type { Product } from '~/types/product';
 
-const route = useRoute();
 const { formatPrice } = useFormatPrice();
 const { addToCart, cartToast } = useCart();
 
-// Fetch dữ liệu từ API (truyền callback phản ứng theo chuẩn Nuxt 4)
-const { data: product, error } = await useFetch<Product>(() => `/api/products/${route.params.id}`);
+const route = useRoute();
+const { data: product } = await useFetch<Product>(`/api/products/${route.params.id}`);
 
-// Xử lý lỗi 404 nếu không tìm thấy sản phẩm
-if (error.value || !product.value) {
-  throw createError({
-    statusCode: 404,
-    statusMessage: `Sản phẩm #${route.params.id} không tồn tại`,
-    fatal: true,
-  });
-}
-
-// SEO Meta động theo sản phẩm
-useSeoMeta({
-  title: () => `${product.value?.name} | Chi Tiết Sản Phẩm`,
-  description: () => product.value?.description,
-  ogImage: () => product.value?.image,
-});
+useHead(() => ({
+  title: product.value
+    ? `${product.value.name} | Chi Tiết Sản Phẩm`
+    : 'Không tìm thấy sản phẩm | Shop điện tử 11',
+}));
 
 const quantity = ref(1);
 

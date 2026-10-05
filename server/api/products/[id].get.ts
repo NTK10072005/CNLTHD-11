@@ -8,7 +8,7 @@ export default defineEventHandler((event) => {
   if (!product) {
     throw createError({
       statusCode: 404,
-      statusMessage: `Không tìm thấy sản phẩm có mã #${id}`,
+      message: `Không tìm thấy sản phẩm có mã #${id}`,
     })
   }
 

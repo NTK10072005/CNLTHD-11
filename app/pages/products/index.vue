@@ -242,34 +242,26 @@ const onlyInStock = ref(route.query.inStock === 'true');
 const searchQuery = ref((route.query.search as string) || '');
 const sortBy = ref((route.query.sort as string) || 'default');
 
-// Phân trang: 6 sản phẩm mỗi trang 
+
 const currentPage = ref(1);
 const itemsPerPage = ref(6);
 
-// useFetch chuẩn SSR
-const { data: products, status, error, refresh } = await useFetch<Product[]>('/api/products', {
-  key: 'products-list',
-  default: () => [],
-  getCachedData(key, nuxtApp) {
-    const data = nuxtApp.payload.data[key] ?? nuxtApp.static.data[key];
-    if (Array.isArray(data) && data.length > 0) return data;
-    return undefined;
-  },
-});
 
-// Tiêu đề danh mục động (Computed)
+const { data: products, status, error, refresh } = await useFetch<Product[]>('/api/products', { key: 'products-list',default: () => [],});
+
+// Tiêu đề danh mục động 
 const categoryTitle = computed(() => {
   const found = categories.find((c) => c.value === selectedCategory.value);
   return found && found.value !== 'all' ? `Danh mục: ${found.label}` : 'Tất Cả Sản Phẩm Công Nghệ';
 });
 
-// Cập nhật SEO Meta động theo danh mục
+
 useSeoMeta({
   title: () => `${categoryTitle.value} | Shop Điện Tử`,
   description: 'Khám phá điện thoại, laptop, thiết bị âm thanh và phụ kiện công nghệ hàng đầu với nhiều ưu đãi.',
 });
 
-// Helper hiển thị nhãn chip lọc lấy từ Single Source of Truth
+
 const formatCategoryLabel = (catVal: string) => {
   return categories.find((c) => c.value === catVal)?.label || catVal;
 };
@@ -277,6 +269,7 @@ const formatCategoryLabel = (catVal: string) => {
 const formatPriceRangeLabel = (rangeVal: string) => {
   return priceRanges.find((r) => r.value === rangeVal)?.label || rangeVal;
 };
+
 
 // Kiểm tra có đang áp dụng bộ lọc nào không
 const hasActiveFilters = computed(() => {
@@ -288,40 +281,34 @@ const hasActiveFilters = computed(() => {
   );
 });
 
-// Lọc và sắp xếp đa điều kiện
+
+
 const filteredProducts = computed(() => {
-  if (!products.value || !Array.isArray(products.value)) return [];
+  if (!products.value) return [];
 
-  let list = [...products.value];
+  const query = searchQuery.value.toLowerCase().trim();
 
-  //  Lọc Danh mục
-  if (selectedCategory.value !== 'all') {
-    list = list.filter((p) => p.category === selectedCategory.value);
-  }
+  
+  const list = products.value.filter((p) => {
+    //  Lọc Danh mục
+    if (selectedCategory.value !== 'all' && p.category !== selectedCategory.value) return false;
+    
+    //  Lọc Chỉ còn hàng
+    if (onlyInStock.value && !p.inStock) return false;
+    
+    //  Lọc Tìm kiếm từ khóa
+    if (query && !p.name.toLowerCase().includes(query)) return false;
+    
+    //  Lọc Khoảng giá
+    if (selectedPriceRange.value === 'under-5m' && p.price >= 5000000) return false;
+    if (selectedPriceRange.value === '5m-15m' && (p.price < 5000000 || p.price > 15000000)) return false;
+    if (selectedPriceRange.value === '15m-30m' && (p.price <= 15000000 || p.price > 30000000)) return false;
+    if (selectedPriceRange.value === 'above-30m' && p.price <= 30000000) return false;
 
-  //  Lọc Khoảng giá
-  if (selectedPriceRange.value === 'under-5m') {
-    list = list.filter((p) => p.price < 5000000);
-  } else if (selectedPriceRange.value === '5m-15m') {
-    list = list.filter((p) => p.price >= 5000000 && p.price <= 15000000);
-  } else if (selectedPriceRange.value === '15m-30m') {
-    list = list.filter((p) => p.price > 15000000 && p.price <= 30000000);
-  } else if (selectedPriceRange.value === 'above-30m') {
-    list = list.filter((p) => p.price > 30000000);
-  }
+    return true; 
+  });
 
-  //  Lọc Chỉ còn hàng
-  if (onlyInStock.value) {
-    list = list.filter((p) => p.inStock);
-  }
-
-  //  Lọc Tìm kiếm từ khóa
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.toLowerCase().trim();
-    list = list.filter((p) => p.name.toLowerCase().includes(q));
-  }
-
-  //  Sắp xếp
+  // Sắp xếp
   if (sortBy.value === 'price-asc') {
     list.sort((a, b) => a.price - b.price);
   } else if (sortBy.value === 'price-desc') {
@@ -333,24 +320,17 @@ const filteredProducts = computed(() => {
   return list;
 });
 
-// Tổng số trang tính theo danh sách sau lọc
-const totalPages = computed(() => {
-  return Math.ceil(filteredProducts.value.length / itemsPerPage.value) || 1;
-});
+// Phân trang
+const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage.value) || 1);
 
-// Cắt mảng sản phẩm theo trang hiện tại (có bảo vệ index hợp lệ)
 const paginatedProducts = computed(() => {
-  const validPage = Math.min(Math.max(1, currentPage.value), totalPages.value);
-  const start = (validPage - 1) * itemsPerPage.value;
-  const end = start + itemsPerPage.value;
-  return filteredProducts.value.slice(start, end);
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  return filteredProducts.value.slice(start, start + itemsPerPage.value);
 });
 
 const goToPage = (page: number) => {
-  if (page >= 1 && page <= totalPages.value) {
-    currentPage.value = page;
-    window.scrollTo({ top: 150, behavior: 'smooth' });
-  }
+  currentPage.value = Math.max(1, Math.min(page, totalPages.value));
+  window.scrollTo({ top: 150, behavior: 'smooth' });
 };
 
 // Tự động reset trang về 1 và đồng bộ query lên URL khi người dùng thay đổi bộ lọc
