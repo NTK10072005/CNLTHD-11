@@ -1,4 +1,5 @@
 import { mockOrders, getNextOrderId } from "../../data/orders";
+import { mockProducts } from "../../data/products";
 
 interface CreateOrderBody {
   userId: number;
@@ -47,6 +48,19 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  // Kiểm tra tồn kho trước khi tạo đơn
+  for (const item of body.items) {
+    const product = mockProducts.find((p) => p.id === Number(item.id));
+    if (product) {
+      if (product.stock < item.quantity) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: `Sản phẩm "${product.name}" không đủ số lượng tồn kho (chỉ còn ${product.stock})`,
+        });
+      }
+    }
+  }
+
   const total = body.items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
@@ -74,6 +88,18 @@ export default defineEventHandler(async (event) => {
 
     createdAt: new Date().toISOString(),
   };
+
+  // Trừ số lượng tồn kho thực tế trong mockProducts
+  for (const item of body.items) {
+    const product = mockProducts.find((p) => p.id === Number(item.id));
+    if (product) {
+      product.stock -= item.quantity;
+      if (product.stock <= 0) {
+        product.stock = 0;
+        product.inStock = false;
+      }
+    }
+  }
 
   mockOrders.push(newOrder);
 

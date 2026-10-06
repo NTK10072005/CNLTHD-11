@@ -6,6 +6,7 @@ export interface Product {
   category: ProductCategory;
   price: number;
   inStock: boolean;
+  stock: number;
   image: string;
   description: string;
   specs: Record<string, string>;
@@ -20,6 +21,7 @@ export interface ProductFormData {
   category: ProductCategory;
   price: number;
   inStock: boolean;
+  stock: number;
   image: string;
   description: string;
   specs: Record<string, string>;

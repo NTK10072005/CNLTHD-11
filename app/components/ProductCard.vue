@@ -107,13 +107,14 @@ const onImageError = (e: Event) => {
 };
 
 const handleAddToCart = () => {
-  if (!props.product.inStock) return;
+  if (!props.product.inStock || (props.product.stock !== undefined && props.product.stock <= 0)) return;
 
   addToCart({
     id: props.product.id,
     name: props.product.name,
     price: props.product.price,
     image: props.product.image,
+    stock: props.product.stock,
   });
 };
 </script>

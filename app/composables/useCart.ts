@@ -5,6 +5,7 @@ export interface CartItem {
     price: number;
     image: string;
     quantity: number;
+    stock?: number;
 }
 
 // Quản lý timer và cờ khởi tạo ở module scope để dùng chung đồng bộ toàn ứng dụng
@@ -56,21 +57,38 @@ export const useCart = () => {
     };
 
     // Thêm vào giỏ
-    const addToCart = (product: { id: number | string; name: string; price: number; image: string }, quantity = 1) => {
+    const addToCart = (
+        product: { id: number | string; name: string; price: number; image: string; stock?: number },
+        quantity = 1
+    ) => {
+        const maxStock = product.stock ?? 99;
         const existing = cart.value.find((item) => item.id === product.id);
+
         if (existing) {
-            existing.quantity += quantity;
+            const newTotal = existing.quantity + quantity;
+            if (newTotal > maxStock) {
+                triggerToast('Số lượng vượt quá tồn kho!', `Kho chỉ còn ${maxStock} sản phẩm`);
+                return false;
+            }
+            existing.quantity = newTotal;
+            if (product.stock !== undefined) existing.stock = product.stock;
         } else {
+            if (quantity > maxStock) {
+                triggerToast('Số lượng vượt quá tồn kho!', `Kho chỉ còn ${maxStock} sản phẩm`);
+                return false;
+            }
             cart.value.push({
                 id: product.id,
                 name: product.name,
                 price: product.price,
                 image: product.image,
                 quantity,
+                stock: product.stock,
             });
         }
         saveCart();
         triggerToast('Đã thêm vào giỏ hàng!', `${product.name} (x${quantity})`);
+        return true;
     };
 
     // Cập nhật số lượng
@@ -80,10 +98,16 @@ export const useCart = () => {
             if (quantity <= 0) {
                 removeFromCart(id);
             } else {
+                if (item.stock !== undefined && quantity > item.stock) {
+                    triggerToast('Đã chạm giới hạn tồn kho!', `Chỉ còn ${item.stock} sản phẩm`);
+                    return false;
+                }
                 item.quantity = quantity;
                 saveCart();
+                return true;
             }
         }
+        return false;
     };
 
     // Xóa khỏi giỏ
