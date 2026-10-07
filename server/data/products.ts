@@ -6,6 +6,7 @@ export interface Product {
   category: "phone" | "laptop" | "audio" | "accessory";
   price: number;
   inStock: boolean;
+  stock: number;
   image: string;
   description: string;
   specs: Record<string, string>;
@@ -20,6 +21,7 @@ export let mockProducts: Product[] = [
     category: "phone",
     price: 27990000,
     inStock: true,
+    stock: 5,
     image:
       "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=600&auto=format&fit=crop&q=80",
     description:
@@ -37,6 +39,7 @@ export let mockProducts: Product[] = [
     category: "phone",
     price: 24490000,
     inStock: true,
+    stock: 8,
     image:
       "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&auto=format&fit=crop&q=80",
     description:
@@ -54,6 +57,7 @@ export let mockProducts: Product[] = [
     category: "phone",
     price: 18990000,
     inStock: false, // Dùng để test badge hết hàng
+    stock: 0,
     image:
       "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600&auto=format&fit=crop&q=80",
     description:
@@ -73,6 +77,7 @@ export let mockProducts: Product[] = [
     category: "laptop",
     price: 49990000,
     inStock: true,
+    stock: 4,
     image:
       "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&auto=format&fit=crop&q=80",
     description:
@@ -90,6 +95,7 @@ export let mockProducts: Product[] = [
     category: "laptop",
     price: 38500000,
     inStock: true,
+    stock: 6,
     image:
       "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=600&auto=format&fit=crop&q=80",
     description:
@@ -107,6 +113,7 @@ export let mockProducts: Product[] = [
     category: "laptop",
     price: 32900000,
     inStock: false, // Dùng để test badge hết hàng
+    stock: 0,
     image:
       "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=600&auto=format&fit=crop&q=80",
     description:
@@ -126,6 +133,7 @@ export let mockProducts: Product[] = [
     category: "audio",
     price: 6990000,
     inStock: true,
+    stock: 10,
     image:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80",
     description:
@@ -143,6 +151,7 @@ export let mockProducts: Product[] = [
     category: "audio",
     price: 5490000,
     inStock: true,
+    stock: 7,
     image:
       "https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=600&auto=format&fit=crop&q=80",
     description:
@@ -160,6 +169,7 @@ export let mockProducts: Product[] = [
     category: "audio",
     price: 3990000,
     inStock: true,
+    stock: 3,
     image:
       "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=600&auto=format&fit=crop&q=80",
     description:
@@ -179,6 +189,7 @@ export let mockProducts: Product[] = [
     category: "accessory",
     price: 2150000,
     inStock: true,
+    stock: 12,
     image:
       "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80",
     description:
@@ -196,6 +207,7 @@ export let mockProducts: Product[] = [
     category: "accessory",
     price: 2290000,
     inStock: true,
+    stock: 9,
     image:
       "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=600&auto=format&fit=crop&q=80",
     description:
@@ -213,6 +225,7 @@ export let mockProducts: Product[] = [
     category: "accessory",
     price: 990000,
     inStock: false, // Dùng để test badge hết hàng
+    stock: 0,
     image:
       "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=600&auto=format&fit=crop&q=80",
     description:
