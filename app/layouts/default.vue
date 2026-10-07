@@ -6,15 +6,12 @@ const searchText = ref('')
 const activePanel = ref('')
 const route = useRoute()
 const { user, logout } = useAuth()
+const { cart, totalItems, totalPrice, removeFromCart } = useCart()
+const { formatPrice } = useFormatPrice()
 const accountLabel = computed(() => user.value?.name || user.value?.username || 'Tài khoản')
 const pinHeader = computed(() => route.path === '/' || route.path.startsWith('/products'))
 
 function handleCartClick() {
-  if (!user.value) {
-    activePanel.value = 'cart'
-    return
-  }
-
   togglePanel('cart')
 }
 
@@ -62,12 +59,20 @@ function submitSearch() {
 
       <div class="order-3 flex basis-full items-center justify-end gap-2 md:order-none md:basis-auto md:gap-[clamp(10px,2vw,26px)]">
         <button
-          class="flex cursor-pointer flex-col items-center gap-1.5 border-0 bg-transparent px-1.5 py-1 text-xs font-semibold text-[#e7f4f5] hover:text-[#62e1dc]"
+          class="relative flex cursor-pointer flex-col items-center gap-1.5 border-0 bg-transparent px-1.5 py-1 text-xs font-semibold text-[#e7f4f5] hover:text-[#62e1dc]"
           type="button"
           :aria-expanded="activePanel === 'cart'"
           @click="handleCartClick"
         >
-          <ShoppingCartIcon class="size-10" aria-hidden="true" />
+          <div class="relative">
+            <ShoppingCartIcon class="size-10" aria-hidden="true" />
+            <span
+              v-if="totalItems > 0"
+              class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-extrabold text-white shadow"
+            >
+              {{ totalItems }}
+            </span>
+          </div>
           <span>Giỏ hàng</span>
         </button>
 
@@ -90,11 +95,13 @@ function submitSearch() {
         leave-from-class="translate-y-0 opacity-100"
         leave-to-class="translate-y-2 opacity-0"
       >
-        <aside v-if="activePanel" class="absolute right-4 top-[calc(100%-6px)] z-30 w-[min(360px,calc(100vw-32px))] rounded-xl border border-[#e8edf5] bg-white p-[22px] shadow-[0_20px_55px_#18294d24] sm:right-[7vw] md:right-[clamp(20px,7vw,104px)] md:top-[calc(50%+54px)]" aria-live="polite">
-          <div class="flex items-center justify-between">
-            <h2 class="m-0 text-lg">{{ activePanel === 'cart' ? 'Giỏ hàng' : 'Tài khoản' }}</h2>
+        <aside v-if="activePanel" class="absolute right-4 top-[calc(100%-6px)] z-30 w-[min(380px,calc(100vw-32px))] rounded-xl border border-[#e8edf5] bg-white p-[22px] shadow-[0_20px_55px_#18294d24] sm:right-[7vw] md:right-[clamp(20px,7vw,104px)] md:top-[calc(50%+54px)]" aria-live="polite">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h2 class="m-0 text-base font-bold text-slate-900">
+              {{ activePanel === 'cart' ? `Giỏ hàng (${totalItems})` : 'Tài khoản' }}
+            </h2>
             <button
-              class="cursor-pointer border-0 bg-transparent text-[27px] text-[#667085]"
+              class="cursor-pointer border-0 bg-transparent text-[24px] text-[#667085] hover:text-slate-900"
               type="button"
               aria-label="Đóng"
               @click="activePanel = ''"
@@ -104,17 +111,42 @@ function submitSearch() {
           </div>
 
           <template v-if="activePanel === 'cart'">
-            <template v-if="!user">
-              <p class="my-5 text-sm leading-[1.65] text-[#69758a]">Vui lòng đăng nhập để sử dụng giỏ hàng.</p>
-              <NuxtLink class="flex min-h-11 items-center justify-center rounded-[10px] bg-[#0caaa8] text-sm font-bold text-white no-underline hover:bg-[#078c91]" to="/login" @click="activePanel = ''">
-                Đăng nhập
-              </NuxtLink>
+            <template v-if="cart.length === 0">
+              <div class="py-8 text-center">
+                <img src="/icon/cart.svg" alt="Giỏ trống" class="mx-auto h-12 w-12 opacity-30" />
+                <p class="my-3 text-sm text-[#69758a]">Giỏ hàng của bạn đang trống.</p>
+                <NuxtLink class="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#0caaa8] px-5 text-xs font-bold text-white no-underline hover:bg-[#078c91]" to="/products" @click="activePanel = ''">
+                  Khám phá sản phẩm
+                </NuxtLink>
+              </div>
             </template>
             <template v-else>
-              <p class="my-5 text-sm leading-[1.65] text-[#69758a]">Giỏ hàng của bạn đang trống.</p>
-              <NuxtLink class="flex min-h-11 items-center justify-center rounded-[10px] bg-[#0caaa8] text-sm font-bold text-white no-underline hover:bg-[#078c91]" to="/products" @click="activePanel = ''">
-                Tiếp tục mua sắm
-              </NuxtLink>
+              <div class="my-3 max-h-64 space-y-3 overflow-y-auto pr-1">
+                <div v-for="item in cart" :key="item.id" class="flex items-center gap-3 border-b border-slate-50 pb-2">
+                  <img :src="item.image" :alt="item.name" class="h-12 w-12 rounded-lg border border-slate-100 object-contain p-1" />
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate text-xs font-bold text-slate-800">{{ item.name }}</p>
+                    <p class="text-[11px] text-slate-500">x{{ item.quantity }} · {{ formatPrice(item.price) }}</p>
+                  </div>
+                  <button type="button" class="text-xs text-rose-500 hover:text-rose-700" @click="removeFromCart(item.id)">
+                    ✕
+                  </button>
+                </div>
+              </div>
+              <div class="border-t border-slate-100 pt-3">
+                <div class="mb-3 flex items-center justify-between text-xs">
+                  <span class="font-medium text-slate-600">Tổng cộng:</span>
+                  <span class="text-sm font-extrabold text-blue-600">{{ formatPrice(totalPrice) }}</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <NuxtLink class="flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50" to="/cart" @click="activePanel = ''">
+                    Xem giỏ hàng
+                  </NuxtLink>
+                  <NuxtLink class="flex min-h-10 items-center justify-center rounded-xl bg-[#0caaa8] text-xs font-bold text-white hover:bg-[#078c91]" to="/checkout" @click="activePanel = ''">
+                    Thanh toán
+                  </NuxtLink>
+                </div>
+              </div>
             </template>
           </template>
 
