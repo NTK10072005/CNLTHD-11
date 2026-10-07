@@ -1,8 +1,8 @@
 <!-- app/components/ProductCard.vue -->
 <template>
   <div class="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-    <!-- Nhãn hết hàng nếu không còn tồn kho hoặc đã thêm hết vào giỏ -->
-    <div v-if="!product.inStock || isMaxInCart" class="absolute left-3 top-3 z-10">
+    <!-- Nhãn hết hàng nếu không còn tồn kho -->
+    <div v-if="!product.inStock" class="absolute left-3 top-3 z-10">
       <span class="rounded-md bg-rose-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
         Hết hàng
       </span>
@@ -56,18 +56,18 @@
 
         <button
           type="button"
-          :disabled="!product.inStock || isMaxInCart"
+          :disabled="!product.inStock"
           class="flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition-all"
           :class="[
-            !product.inStock || isMaxInCart
+            !product.inStock
               ? 'cursor-not-allowed bg-slate-100 text-slate-400'
               : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
           ]"
-          :title="!product.inStock || isMaxInCart ? 'Sản phẩm đã hết hàng hoặc đã đạt giới hạn trong giỏ' : ''"
+          :title="!product.inStock ? 'Sản phẩm đã hết hàng' : 'Thêm vào giỏ hàng'"
           @click.stop="handleAddToCart"
         >
-          <img v-if="product.inStock && !isMaxInCart" src="/icon/cart-white.svg" alt="Giỏ hàng" class="h-3.5 w-3.5" />
-          <span v-if="!product.inStock || isMaxInCart">Hết hàng</span>
+          <img v-if="product.inStock" src="/icon/cart-white.svg" alt="Giỏ hàng" class="h-3.5 w-3.5" />
+          <span v-if="!product.inStock">Hết hàng</span>
           <span v-else>+ Giỏ hàng</span>
         </button>
       </div>
@@ -83,7 +83,7 @@ const props = defineProps<{
 }>();
 
 const { formatPrice } = useFormatPrice();
-const { cart, addToCart } = useCart();
+const { cart, addToCart, triggerToast } = useCart();
 
 // Đếm số lượng sản phẩm này đã có trong giỏ hàng
 const itemInCartCount = computed(() => {
@@ -121,7 +121,12 @@ const onImageError = (e: Event) => {
 };
 
 const handleAddToCart = () => {
-  if (!props.product.inStock || isMaxInCart.value) return;
+  if (!props.product.inStock) return;
+
+  if (isMaxInCart.value) {
+    triggerToast('Số lượng vượt quá tồn kho!', `Bạn đã có tối đa ${props.product.stock} sản phẩm trong giỏ hàng`);
+    return;
+  }
 
   addToCart({
     id: Number(props.product.id),

@@ -138,6 +138,7 @@ export const useCart = () => {
     return {
         cart,
         cartToast,
+        triggerToast,
         addToCart,
         updateQuantity,
         removeFromCart,

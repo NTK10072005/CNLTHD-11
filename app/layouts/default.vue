@@ -6,7 +6,7 @@ const searchText = ref('')
 const activePanel = ref('')
 const route = useRoute()
 const { user, logout } = useAuth()
-const { cart, totalItems, totalPrice, removeFromCart } = useCart()
+const { cart, totalItems, totalPrice, removeFromCart, cartToast } = useCart()
 const { formatPrice } = useFormatPrice()
 const accountLabel = computed(() => user.value?.name || user.value?.username || 'Tài khoản')
 const pinHeader = computed(() => route.path === '/' || route.path.startsWith('/products'))
@@ -207,5 +207,30 @@ function submitSearch() {
       <slot />
     </main>
     <Footer />
+
+    <!-- Toast Thông báo giỏ hàng toàn cục -->
+    <Transition
+      enter-active-class="transform transition duration-300 ease-out"
+      enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:translate-x-4"
+      enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
+      leave-active-class="transition duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="cartToast.show"
+        class="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-sm"
+      >
+        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-600">
+          ✓
+        </div>
+        <div class="text-xs">
+          <p class="font-bold text-slate-800">{{ cartToast.message }}</p>
+          <p v-if="cartToast.subMessage" class="text-[11px] text-slate-500 line-clamp-1">
+            {{ cartToast.subMessage }}
+          </p>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
