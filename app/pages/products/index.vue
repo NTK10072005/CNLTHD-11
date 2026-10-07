@@ -26,13 +26,13 @@
             v-model="searchQuery"
             type="text"
             placeholder="Tìm theo tên sản phẩm..."
-            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pr-8 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pr-8 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-60"
+            @input="clearHeaderSearch"
           />
           <button
             v-if="searchQuery"
-            type="button"
-            class="absolute right-2.5 top-2 text-xs font-bold text-slate-400 hover:text-slate-600"
-            @click="searchQuery = ''"
+            class="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600"
+            @click="searchQuery = ''; clearHeaderSearch()"
           >
             ✕
           </button>
@@ -214,9 +214,29 @@
 <script setup lang="ts">
 import type { Product } from '~/types/product';
 
-const route = useRoute();
-const router = useRouter();
-const { cartToast } = useCart();
+const route = useRoute()
+const initialSearch = typeof route.query.search === 'string' ? route.query.search : ''
+const headerSearchTerm = ref(initialSearch)
+
+// SEO Meta
+useSeoMeta({
+  title: 'Danh Sách Sản Phẩm | Cửa hàng bán máy tính và đồ điện tử',
+  description: 'Khám phá điện thoại, laptop, thiết bị âm thanh và phụ kiện công nghệ hàng đầu.',
+});
+
+// useFetch chuẩn SSR với cơ chế tự kiểm tra tính hợp lệ của Cache (tránh mismatch khi bật SWR)
+const { data: products, status, error, refresh } = await useFetch<Product[]>('/api/products', {
+  key: 'products-list',
+  default: () => [],
+  getCachedData(key, nuxtApp) {
+    const data = nuxtApp.payload.data[key] ?? nuxtApp.static.data[key];
+    if (Array.isArray(data) && data.length > 0) {
+      return data;
+    }
+    return undefined; // Bỏ qua cache nếu data không phải là mảng sản phẩm hợp lệ
+  },
+});
+
 
 // Danh mục và khoảng giá định nghĩa chuẩn
 const categories = [
@@ -227,61 +247,9 @@ const categories = [
   { label: 'Phụ kiện', value: 'accessory' },
 ];
 
-const priceRanges = [
-  { label: 'Tất cả mức giá', value: 'all' },
-  { label: 'Dưới 5 triệu', value: 'under-5m' },
-  { label: 'Từ 5 - 15 triệu', value: '5m-15m' },
-  { label: 'Từ 15 - 30 triệu', value: '15m-30m' },
-  { label: 'Trên 30 triệu', value: 'above-30m' },
-];
-
-// Khởi tạo State từ Query URL khi tải trang
-const selectedCategory = ref((route.query.category as string) || 'all');
-const selectedPriceRange = ref((route.query.price as string) || 'all');
-const onlyInStock = ref(route.query.inStock === 'true');
-const searchQuery = ref((route.query.search as string) || '');
-const sortBy = ref((route.query.sort as string) || 'default');
-
-
-const currentPage = ref(1);
-const itemsPerPage = ref(6);
-
-
-const { data: products, status, error, refresh } = await useFetch<Product[]>('/api/products', { key: 'products-list',default: () => [],});
-
-// Tiêu đề danh mục động 
-const categoryTitle = computed(() => {
-  const found = categories.find((c) => c.value === selectedCategory.value);
-  return found && found.value !== 'all' ? `Danh mục: ${found.label}` : 'Tất Cả Sản Phẩm Công Nghệ';
-});
-
-
-useSeoMeta({
-  title: () => `${categoryTitle.value} | Shop Điện Tử`,
-  description: 'Khám phá điện thoại, laptop, thiết bị âm thanh và phụ kiện công nghệ hàng đầu với nhiều ưu đãi.',
-});
-
-
-const formatCategoryLabel = (catVal: string) => {
-  return categories.find((c) => c.value === catVal)?.label || catVal;
-};
-
-const formatPriceRangeLabel = (rangeVal: string) => {
-  return priceRanges.find((r) => r.value === rangeVal)?.label || rangeVal;
-};
-
-
-// Kiểm tra có đang áp dụng bộ lọc nào không
-const hasActiveFilters = computed(() => {
-  return (
-    selectedCategory.value !== 'all' ||
-    selectedPriceRange.value !== 'all' ||
-    onlyInStock.value ||
-    searchQuery.value.trim().length > 0
-  );
-});
-
-
+const selectedCategory = ref('all');
+const searchQuery = ref(initialSearch);
+const sortBy = ref('default');
 
 const filteredProducts = computed(() => {
   if (!products.value) return [];
@@ -320,57 +288,32 @@ const filteredProducts = computed(() => {
   return list;
 });
 
-// Phân trang
-const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage.value) || 1);
-
-const paginatedProducts = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage.value;
-  return filteredProducts.value.slice(start, start + itemsPerPage.value);
+watch(() => route.query.search, (value) => {
+  const query = typeof value === 'string' ? value : ''
+  searchQuery.value = query
+  headerSearchTerm.value = query
 });
 
-const goToPage = (page: number) => {
-  currentPage.value = Math.max(1, Math.min(page, totalPages.value));
-  window.scrollTo({ top: 150, behavior: 'smooth' });
-};
-
-// Tự động reset trang về 1 và đồng bộ query lên URL khi người dùng thay đổi bộ lọc
-let queryTimeout: ReturnType<typeof setTimeout> | null = null;
-watch([selectedCategory, selectedPriceRange, onlyInStock, searchQuery, sortBy], () => {
-  currentPage.value = 1;
-
-  if (import.meta.client) {
-    if (queryTimeout) clearTimeout(queryTimeout);
-    queryTimeout = setTimeout(() => {
-      const query: Record<string, string | undefined> = {};
-      if (selectedCategory.value !== 'all') query.category = selectedCategory.value;
-      if (selectedPriceRange.value !== 'all') query.price = selectedPriceRange.value;
-      if (onlyInStock.value) query.inStock = 'true';
-      if (searchQuery.value.trim()) query.search = searchQuery.value.trim();
-      if (sortBy.value !== 'default') query.sort = sortBy.value;
-
-      router.replace({ query });
-    }, 150);
+watch([status, filteredProducts], ([currentStatus, matches]) => {
+  if (currentStatus === 'success' && headerSearchTerm.value.trim() && matches.length === 0) {
+    navigateTo({ path: '/error', query: { search: headerSearchTerm.value } })
   }
 });
 
-// Đồng bộ ngược lại state khi URL thay đổi (hỗ trợ nút Back / Forward trên trình duyệt)
-watch(
-  () => route.query,
-  (newQuery) => {
-    selectedCategory.value = (newQuery.category as string) || 'all';
-    selectedPriceRange.value = (newQuery.price as string) || 'all';
-    onlyInStock.value = newQuery.inStock === 'true';
-    searchQuery.value = (newQuery.search as string) || '';
-    sortBy.value = (newQuery.sort as string) || 'default';
-  }
-);
+if (initialSearch && status.value === 'success' && filteredProducts.value.length === 0) {
+  await navigateTo({ path: '/error', query: { search: initialSearch } })
+}
 
-// Xóa tất cả bộ lọc về mặc định
+function clearHeaderSearch() {
+  headerSearchTerm.value = ''
+}
+
 const resetFilters = () => {
   selectedCategory.value = 'all';
   selectedPriceRange.value = 'all';
   onlyInStock.value = false;
   searchQuery.value = '';
+  clearHeaderSearch();
   sortBy.value = 'default';
 };
 </script>

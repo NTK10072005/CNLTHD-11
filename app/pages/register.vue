@@ -10,6 +10,15 @@ const form = reactive({
   password: '',
   confirmPassword: '',
 })
+const errors = reactive({
+  name: '',
+  username: '',
+  email: '',
+  phone: '',
+  address: '',
+  password: '',
+  confirmPassword: '',
+})
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 const isSubmitting = ref(false)
@@ -18,13 +27,57 @@ const { registerAccount } = useAuth()
 
 useHead({ title: 'Đăng ký | Shop điện tử 11' })
 
+function validateForm() {
+  Object.keys(errors).forEach((key) => {
+    errors[key as keyof typeof errors] = ''
+  })
+
+  const name = form.name.trim()
+  const username = form.username.trim()
+  const email = form.email.trim()
+  const phone = form.phone.trim()
+  const address = form.address.trim()
+
+  if (!name) errors.name = 'Vui lòng nhập họ và tên.'
+  else if (name.length < 2 || name.length > 60 || !/^[\p{L}\p{M}]+(?:[ '\u2019-][\p{L}\p{M}]+)*$/u.test(name)) {
+    errors.name = 'Họ tên cần 2-60 ký tự, chỉ gồm chữ và dấu cách.'
+  }
+
+  if (!username) errors.username = 'Vui lòng nhập tên đăng nhập.'
+  else if (!/^[a-zA-Z0-9._]{3,20}$/.test(username)) {
+    errors.username = 'Tên đăng nhập gồm 3-20 ký tự: chữ không dấu, số, dấu chấm hoặc gạch dưới.'
+  }
+
+  if (!email) errors.email = 'Vui lòng nhập email.'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+    errors.email = 'Email không đúng định dạng.'
+  }
+
+  if (!phone) errors.phone = 'Vui lòng nhập số điện thoại.'
+  else if (!/^0[0-9]{9}$/.test(phone)) {
+    errors.phone = 'Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0.'
+  }
+
+  if (!address) errors.address = 'Vui lòng nhập địa chỉ.'
+  else if (address.length > 200) errors.address = 'Địa chỉ không được vượt quá 200 ký tự.'
+
+  if (!form.password) errors.password = 'Vui lòng nhập mật khẩu.'
+  else if (form.password.length < 8) errors.password = 'Mật khẩu cần ít nhất 8 ký tự.'
+
+  if (!form.confirmPassword) errors.confirmPassword = 'Vui lòng xác nhận mật khẩu.'
+  else if (form.password !== form.confirmPassword) errors.confirmPassword = 'Mật khẩu xác nhận không khớp.'
+
+  return !Object.values(errors).some(Boolean)
+}
+
+function clearFieldError(field: keyof typeof errors) {
+  errors[field] = ''
+}
+
 async function submitRegistration() {
   errorMessage.value = ''
 
-  if (form.password !== form.confirmPassword) {
-    errorMessage.value = 'Mật khẩu xác nhận không khớp.'
-    return
-  }
+  if (!validateForm()) return
 
   isSubmitting.value = true
 
@@ -57,7 +110,7 @@ async function submitRegistration() {
       <h1 id="register-title" class="m-0 text-[clamp(26px,5vw,32px)] leading-[1.2] text-[#102b3a]">Tạo tài khoản</h1>
       <p class="mb-6 mt-2.5 text-sm leading-[1.6] text-[#657782]">Đăng ký để mua sắm và theo dõi đơn hàng dễ dàng hơn.</p>
 
-      <form @submit.prevent="submitRegistration">
+      <form novalidate @submit.prevent="submitRegistration">
         <div class="grid grid-cols-1 gap-4 min-[521px]:grid-cols-2">
           <div class="grid min-w-0 content-start gap-[7px]">
             <label class="text-[13px] font-bold text-[#213946]" for="name">Họ và tên</label>
@@ -69,8 +122,12 @@ async function submitRegistration() {
               type="text"
               autocomplete="name"
               placeholder="Nhập họ và tên"
+              maxlength="60"
+              :aria-invalid="Boolean(errors.name)"
+              @input="clearFieldError('name')"
               required
             />
+            <p v-if="errors.name" class="m-0 text-xs text-rose-600" role="alert">{{ errors.name }}</p>
           </div>
 
           <div class="grid min-w-0 content-start gap-[7px]">
@@ -84,8 +141,12 @@ async function submitRegistration() {
               autocomplete="username"
               placeholder="Tạo tên đăng nhập"
               minlength="3"
+              maxlength="20"
+              :aria-invalid="Boolean(errors.username)"
+              @input="clearFieldError('username')"
               required
             />
+            <p v-if="errors.username" class="m-0 text-xs text-rose-600" role="alert">{{ errors.username }}</p>
           </div>
 
           <div class="grid min-w-0 content-start gap-[7px]">
@@ -98,8 +159,11 @@ async function submitRegistration() {
               type="email"
               autocomplete="email"
               placeholder="ten@email.com"
+              :aria-invalid="Boolean(errors.email)"
+              @input="clearFieldError('email')"
               required
             />
+            <p v-if="errors.email" class="m-0 text-xs text-rose-600" role="alert">{{ errors.email }}</p>
           </div>
 
           <div class="grid min-w-0 content-start gap-[7px]">
@@ -109,11 +173,17 @@ async function submitRegistration() {
               id="phone"
               v-model="form.phone"
               name="phone"
-              type="tel"
+              type="text"
+              inputmode="numeric"
               autocomplete="tel"
               placeholder="Nhập số điện thoại"
+              minlength="10"
+              maxlength="10"
+              :aria-invalid="Boolean(errors.phone)"
+              @input="clearFieldError('phone')"
               required
             />
+            <p v-if="errors.phone" class="m-0 text-xs text-rose-600" role="alert">{{ errors.phone }}</p>
           </div>
 
           <div class="col-span-full grid min-w-0 content-start gap-[7px] min-[521px]:col-span-2">
@@ -126,8 +196,12 @@ async function submitRegistration() {
               autocomplete="street-address"
               placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành"
               rows="2"
+              maxlength="200"
+              :aria-invalid="Boolean(errors.address)"
+              @input="clearFieldError('address')"
               required
             />
+            <p v-if="errors.address" class="m-0 text-xs text-rose-600" role="alert">{{ errors.address }}</p>
           </div>
 
           <div class="grid min-w-0 content-start gap-[7px]">
@@ -142,6 +216,8 @@ async function submitRegistration() {
                 autocomplete="new-password"
                 placeholder="Tối thiểu 8 ký tự"
                 minlength="8"
+                :aria-invalid="Boolean(errors.password)"
+                @input="clearFieldError('password')"
                 required
               />
               <button
@@ -154,6 +230,7 @@ async function submitRegistration() {
                 {{ showPassword ? 'Ẩn' : 'Hiện' }}
               </button>
             </div>
+            <p v-if="errors.password" class="m-0 text-xs text-rose-600" role="alert">{{ errors.password }}</p>
           </div>
 
           <div class="grid min-w-0 content-start gap-[7px]">
@@ -168,6 +245,8 @@ async function submitRegistration() {
                 autocomplete="new-password"
                 placeholder="Nhập lại mật khẩu"
                 minlength="8"
+                :aria-invalid="Boolean(errors.confirmPassword)"
+                @input="clearFieldError('confirmPassword')"
                 required
               />
               <button
@@ -180,6 +259,7 @@ async function submitRegistration() {
                 {{ showConfirmPassword ? 'Ẩn' : 'Hiện' }}
               </button>
             </div>
+            <p v-if="errors.confirmPassword" class="m-0 text-xs text-rose-600" role="alert">{{ errors.confirmPassword }}</p>
           </div>
         </div>
 
