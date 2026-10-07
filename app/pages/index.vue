@@ -99,13 +99,14 @@ function showBanner(index: number) {
 
 onMounted(() => {
   bannerTimer = setInterval(() => showBanner(currentBanner.value + 1), 5000)
+  refresh()
 })
 
 onUnmounted(() => {
   if (bannerTimer) clearInterval(bannerTimer)
 })
 
-const { data: products, status, error } = await useFetch<Product[]>('/api/products', {
+const { data: products, status, error, refresh } = await useFetch<Product[]>('/api/products', {
   key: 'home-featured-products',
   default: () => [],
 })

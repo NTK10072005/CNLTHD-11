@@ -61,8 +61,9 @@ export const useCart = () => {
         product: { id: number | string; name: string; price: number; image: string; stock?: number },
         quantity = 1
     ) => {
+        const prodId = Number(product.id);
         const maxStock = product.stock ?? 99;
-        const existing = cart.value.find((item) => item.id === product.id);
+        const existing = cart.value.find((item) => Number(item.id) === prodId);
 
         if (existing) {
             const newTotal = existing.quantity + quantity;
@@ -78,7 +79,7 @@ export const useCart = () => {
                 return false;
             }
             cart.value.push({
-                id: product.id,
+                id: prodId,
                 name: product.name,
                 price: product.price,
                 image: product.image,
@@ -93,13 +94,15 @@ export const useCart = () => {
 
     // Cập nhật số lượng
     const updateQuantity = (id: number | string, quantity: number) => {
-        const item = cart.value.find((i) => i.id === id);
+        const targetId = Number(id);
+        const item = cart.value.find((i) => Number(i.id) === targetId);
         if (item) {
             if (quantity <= 0) {
-                removeFromCart(id);
+                removeFromCart(targetId);
             } else {
-                if (item.stock !== undefined && quantity > item.stock) {
-                    triggerToast('Đã chạm giới hạn tồn kho!', `Chỉ còn ${item.stock} sản phẩm`);
+                const maxStock = item.stock ?? 99;
+                if (quantity > maxStock) {
+                    triggerToast('Đã chạm giới hạn tồn kho!', `Chỉ còn ${maxStock} sản phẩm`);
                     return false;
                 }
                 item.quantity = quantity;
@@ -112,7 +115,8 @@ export const useCart = () => {
 
     // Xóa khỏi giỏ
     const removeFromCart = (id: number | string) => {
-        cart.value = cart.value.filter((i) => i.id !== id);
+        const targetId = Number(id);
+        cart.value = cart.value.filter((i) => Number(i.id) !== targetId);
         saveCart();
     };
 

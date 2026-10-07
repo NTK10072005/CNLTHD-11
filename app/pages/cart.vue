@@ -74,10 +74,10 @@
                 <span class="w-8 text-center text-xs font-bold text-slate-800">{{ item.quantity }}</span>
                 <button
                   type="button"
-                  :disabled="item.stock !== undefined && item.quantity >= item.stock"
+                  :disabled="item.quantity >= (item.stock ?? 99)"
                   class="px-2.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                   @click="updateQuantity(item.id, item.quantity + 1)"
-                  :title="item.stock !== undefined && item.quantity >= item.stock ? `Đã đạt giới hạn tồn kho (${item.stock} cái)` : ''"
+                  :title="item.quantity >= (item.stock ?? 99) ? `Đã đạt giới hạn tồn kho (${item.stock ?? 99} cái)` : ''"
                 >
                   +
                 </button>

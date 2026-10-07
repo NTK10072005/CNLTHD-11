@@ -225,17 +225,14 @@ useSeoMeta({
   description: 'Khám phá điện thoại, laptop, thiết bị âm thanh và phụ kiện công nghệ hàng đầu.',
 });
 
-// useFetch chuẩn SSR với cơ chế tự kiểm tra tính hợp lệ của Cache (tránh mismatch khi bật SWR)
+// Luôn lấy dữ liệu tồn kho mới nhất từ server khi vào trang
 const { data: products, status, error, refresh } = await useFetch<Product[]>('/api/products', {
   key: 'products-list',
   default: () => [],
-  getCachedData(key, nuxtApp) {
-    const data = nuxtApp.payload.data[key] ?? nuxtApp.static.data[key];
-    if (Array.isArray(data) && data.length > 0) {
-      return data;
-    }
-    return undefined; // Bỏ qua cache nếu data không phải là mảng sản phẩm hợp lệ
-  },
+});
+
+onMounted(() => {
+  refresh();
 });
 
 
@@ -361,6 +358,10 @@ function clearHeaderSearch() {
   headerSearchTerm.value = ''
 }
 
+watch([selectedCategory, selectedPriceRange, onlyInStock, searchQuery], () => {
+  currentPage.value = 1;
+});
+
 const resetFilters = () => {
   selectedCategory.value = 'all';
   selectedPriceRange.value = 'all';
@@ -368,5 +369,6 @@ const resetFilters = () => {
   searchQuery.value = '';
   clearHeaderSearch();
   sortBy.value = 'default';
+  currentPage.value = 1;
 };
 </script>
