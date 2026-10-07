@@ -39,14 +39,27 @@
         <!-- Trạng thái kho hàng -->
         <div class="mt-3 flex items-center gap-2 text-xs font-semibold">
           <span
-            class="inline-flex items-center gap-1 rounded-md px-2.5 py-1"
-            :class="product.inStock && product.stock > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'"
+            v-if="!product.inStock || product.stock <= 0"
+            class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-rose-700"
           >
-            <span
-              class="h-1.5 w-1.5 rounded-full"
-              :class="product.inStock && product.stock > 0 ? 'bg-emerald-500' : 'bg-rose-500'"
-            ></span>
-            {{ product.inStock && product.stock > 0 ? `Còn hàng trong kho (${product.stock} sản phẩm)` : 'Tạm hết hàng' }}
+            <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+            Tạm hết hàng
+          </span>
+
+          <span
+            v-else-if="availableToBuy <= 0"
+            class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-rose-700"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
+            Hết hàng (Bạn đã chọn hết {{ itemInCartCount }}/{{ product.stock }} vào giỏ)
+          </span>
+
+          <span
+            v-else
+            class="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1 text-emerald-700"
+          >
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            Còn hàng trong kho ({{ product.stock }} sản phẩm)
           </span>
         </div>
 
@@ -97,17 +110,17 @@
               @click="handleAddToCart"
             >
               <img src="/icon/cart.svg" alt="Giỏ hàng" class="h-4 w-4" />
-              <span>{{ availableToBuy <= 0 && itemInCartCount > 0 ? 'Đã thêm tối đa vào giỏ' : 'Thêm vào giỏ hàng' }}</span>
+              <span>{{ !product.inStock ? 'Hết hàng' : (availableToBuy <= 0 && itemInCartCount > 0 ? 'Đã thêm tối đa vào giỏ' : 'Thêm vào giỏ hàng') }}</span>
             </button>
 
             <!-- Nút Mua ngay -->
             <button
               type="button"
-              :disabled="!product.inStock || availableToBuy <= 0"
+              :disabled="!product.inStock || (availableToBuy <= 0 && itemInCartCount === 0)"
               class="flex-1 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-300 sm:flex-initial"
               @click="handleBuyNow"
             >
-              Mua ngay
+              {{ availableToBuy <= 0 && itemInCartCount > 0 ? 'Thanh toán ngay' : 'Mua ngay' }}
             </button>
           </div>
 
@@ -218,14 +231,16 @@ const quantity = ref(1);
 // Đếm số lượng sản phẩm này đã có trong giỏ hàng
 const itemInCartCount = computed(() => {
   if (!product.value) return 0;
-  const found = cart.value.find((i) => i.id === product.value?.id);
+  const targetId = Number(product.value.id);
+  const found = cart.value.find((i) => Number(i.id) === targetId);
   return found ? found.quantity : 0;
 });
 
 // Số lượng còn có thể mua thêm = Tồn kho - Số lượng đã nằm trong giỏ
 const availableToBuy = computed(() => {
   if (!product.value || !product.value.inStock) return 0;
-  return Math.max(0, product.value.stock - itemInCartCount.value);
+  const stockLimit = product.value.stock ?? 99;
+  return Math.max(0, stockLimit - itemInCartCount.value);
 });
 
 // Đảm bảo số lượng chọn mua luôn trong khoảng [1, availableToBuy]
@@ -253,11 +268,11 @@ const onImageError = (e: Event) => {
 };
 
 const handleAddToCart = () => {
-  if (!product.value || !product.value.inStock || product.value.stock <= 0) return;
+  if (!product.value || !product.value.inStock || availableToBuy.value <= 0) return;
 
   addToCart(
     {
-      id: product.value.id,
+      id: Number(product.value.id),
       name: product.value.name,
       price: product.value.price,
       image: product.value.image,
@@ -268,10 +283,14 @@ const handleAddToCart = () => {
 };
 
 const handleBuyNow = () => {
-  if (!product.value || !product.value.inStock || product.value.stock <= 0) return;
+  if (!product.value || !product.value.inStock) return;
+  if (availableToBuy.value <= 0) {
+    navigateTo('/cart');
+    return;
+  }
   const added = addToCart(
     {
-      id: product.value.id,
+      id: Number(product.value.id),
       name: product.value.name,
       price: product.value.price,
       image: product.value.image,

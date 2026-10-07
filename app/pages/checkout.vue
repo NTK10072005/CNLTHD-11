@@ -63,6 +63,7 @@ async function placeOrder() {
     });
 
     clearCart();
+    await refreshNuxtData();
 
     await navigateTo(`/orders/${response.order.id}`);
   } catch (error) {

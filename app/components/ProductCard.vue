@@ -1,8 +1,8 @@
 <!-- app/components/ProductCard.vue -->
 <template>
   <div class="group relative flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-    <!-- Nhãn hết hàng nếu không còn tồn kho -->
-    <div v-if="!product.inStock" class="absolute left-3 top-3 z-10">
+    <!-- Nhãn hết hàng nếu không còn tồn kho hoặc đã thêm hết vào giỏ -->
+    <div v-if="!product.inStock || isMaxInCart" class="absolute left-3 top-3 z-10">
       <span class="rounded-md bg-rose-500 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
         Hết hàng
       </span>
@@ -56,17 +56,18 @@
 
         <button
           type="button"
-          :disabled="!product.inStock"
+          :disabled="!product.inStock || isMaxInCart"
           class="flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition-all"
           :class="[
-            !product.inStock
+            !product.inStock || isMaxInCart
               ? 'cursor-not-allowed bg-slate-100 text-slate-400'
               : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
           ]"
+          :title="!product.inStock || isMaxInCart ? 'Sản phẩm đã hết hàng hoặc đã đạt giới hạn trong giỏ' : ''"
           @click.stop="handleAddToCart"
         >
-          <img v-if="product.inStock" src="/icon/cart-white.svg" alt="Giỏ hàng" class="h-3.5 w-3.5" />
-          <span v-if="!product.inStock">Hết hàng</span>
+          <img v-if="product.inStock && !isMaxInCart" src="/icon/cart-white.svg" alt="Giỏ hàng" class="h-3.5 w-3.5" />
+          <span v-if="!product.inStock || isMaxInCart">Hết hàng</span>
           <span v-else>+ Giỏ hàng</span>
         </button>
       </div>
@@ -82,7 +83,20 @@ const props = defineProps<{
 }>();
 
 const { formatPrice } = useFormatPrice();
-const { addToCart } = useCart();
+const { cart, addToCart } = useCart();
+
+// Đếm số lượng sản phẩm này đã có trong giỏ hàng
+const itemInCartCount = computed(() => {
+  const targetId = Number(props.product.id);
+  const found = cart.value.find((i) => Number(i.id) === targetId);
+  return found ? found.quantity : 0;
+});
+
+// Kiểm tra xem đã thêm hết số lượng tồn kho vào giỏ chưa
+const isMaxInCart = computed(() => {
+  const stockLimit = props.product.stock ?? (props.product.inStock ? 99 : 0);
+  return itemInCartCount.value >= stockLimit;
+});
 
 // Lấy thông số kỹ thuật đầu tiên để hiển thị rút gọn trên thẻ
 const firstSpec = computed(() => {
@@ -107,10 +121,10 @@ const onImageError = (e: Event) => {
 };
 
 const handleAddToCart = () => {
-  if (!props.product.inStock || (props.product.stock !== undefined && props.product.stock <= 0)) return;
+  if (!props.product.inStock || isMaxInCart.value) return;
 
   addToCart({
-    id: props.product.id,
+    id: Number(props.product.id),
     name: props.product.name,
     price: props.product.price,
     image: props.product.image,
