@@ -1,5 +1,7 @@
+<!-- app/error.vue -->
 <template>
-  <div>
-    <!-- error.vue -->
-  </div>
+  <NuxtLayout>
+  
+  </NuxtLayout>
 </template>
+
