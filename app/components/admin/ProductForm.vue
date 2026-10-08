@@ -28,6 +28,7 @@ const form = reactive<ProductFormData>({
   category: "phone",
   price: 0,
   inStock: true,
+  stock: 0,
   image: "",
   description: "",
   specs: {},
@@ -46,6 +47,7 @@ function fillFormFromProduct() {
   form.category = props.product.category;
   form.price = props.product.price;
   form.inStock = props.product.inStock;
+  form.stock = props.product.stock;
   form.image = props.product.image;
   form.description = props.product.description;
 
@@ -74,6 +76,11 @@ function validateForm() {
 
   if (form.price <= 0) {
     errorMessage.value = "Giá sản phẩm phải lớn hơn 0.";
+    return false;
+  }
+
+  if (!Number.isInteger(form.stock) || form.stock < 0) {
+    errorMessage.value = "Số lượng tồn kho phải là số nguyên không âm.";
     return false;
   }
 
@@ -123,6 +130,7 @@ function handleSubmit() {
     category: form.category,
     price: Number(form.price),
     inStock: form.inStock,
+    stock: Number(form.stock),
     image: form.image.trim(),
     description: form.description.trim(),
     specs: {
@@ -244,6 +252,20 @@ const categoryOptions: {
     </div>
 
     <!-- Stock -->
+    <div>
+      <label for="product-quantity" class="mb-2 block text-sm font-semibold text-slate-700">
+        Số lượng tồn kho
+      </label>
+      <input
+        id="product-quantity"
+        v-model.number="form.stock"
+        type="number"
+        min="0"
+        step="1"
+        class="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-teal-500"
+      />
+    </div>
+
     <div>
       <label
         for="product-stock"
