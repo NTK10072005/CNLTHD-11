@@ -8,7 +8,7 @@
       <span class="font-medium text-slate-800">Danh mục sản phẩm</span>
     </nav>
 
-    <!-- Header Trang & Thanh tìm kiếm và sắp xếp -->
+    <!-- Header Trang & sắp xếp -->
     <div class="mb-6 flex flex-col gap-4 border-b border-slate-200 pb-5 md:flex-row md:items-center md:justify-between">
       <div>
         <h1 class="text-2xl font-extrabold text-slate-900 sm:text-3xl">
@@ -19,25 +19,8 @@
         </p>
       </div>
 
-      <!-- Ô tìm kiếm & Sắp xếp -->
+     
       <div class="flex flex-wrap items-center gap-3">
-        <div class="relative w-full sm:w-64">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Tìm theo tên sản phẩm..."
-            class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 pr-8 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 sm:w-60"
-            @input="clearHeaderSearch"
-          />
-          <button
-            v-if="searchQuery"
-            class="absolute right-2.5 top-2.5 text-xs text-slate-400 hover:text-slate-600"
-            @click="searchQuery = ''; clearHeaderSearch()"
-          >
-            ✕
-          </button>
-        </div>
-
         <select
           v-model="sortBy"
           class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -189,10 +172,10 @@
 <script setup lang="ts">
 import type { Product } from '~/types/product';
 
-const route = useRoute()
-const { cartToast } = useCart()
-const initialSearch = typeof route.query.search === 'string' ? route.query.search : ''
-const headerSearchTerm = ref(initialSearch)
+const route = useRoute();
+const router = useRouter();
+const { cartToast } = useCart();
+const initialSearch = typeof route.query.search === 'string' ? route.query.search : '';
 
 // SEO Meta
 useSeoMeta({
@@ -313,36 +296,55 @@ const goToPage = (page: number) => {
   window.scrollTo({ top: 150, behavior: 'smooth' });
 };
 
-watch(() => route.query.search, (value) => {
-  const query = typeof value === 'string' ? value : ''
-  searchQuery.value = query
-  headerSearchTerm.value = query
+// Tự động reset về trang 1 và đồng bộ bộ lọc lên URL query khi thay đổi
+let queryTimeout: ReturnType<typeof setTimeout> | null = null;
+
+watch([selectedCategory, selectedPriceRange, onlyInStock, sortBy, searchQuery], () => {
+  currentPage.value = 1;
+
+  if (import.meta.client) {
+    if (queryTimeout) clearTimeout(queryTimeout);
+    queryTimeout = setTimeout(() => {
+      const query: Record<string, string | undefined> = {};
+      if (selectedCategory.value !== 'all') query.category = selectedCategory.value;
+      if (selectedPriceRange.value !== 'all') query.price = selectedPriceRange.value;
+      if (onlyInStock.value) query.inStock = 'true';
+      if (sortBy.value !== 'default') query.sort = sortBy.value;
+      if (searchQuery.value.trim()) query.search = searchQuery.value.trim();
+
+      router.replace({ query });
+    }, 150);
+  }
 });
 
+// Đồng bộ ngược lại khi URL thay đổi (nhấn Back/Forward trên trình duyệt hoặc đổi URL từ ngoài)
+watch(
+  () => route.query,
+  (newQuery) => {
+    selectedCategory.value = (newQuery.category as string) || 'all';
+    selectedPriceRange.value = (newQuery.price as string) || 'all';
+    onlyInStock.value = newQuery.inStock === 'true';
+    sortBy.value = (newQuery.sort as string) || 'default';
+    searchQuery.value = typeof newQuery.search === 'string' ? newQuery.search : '';
+  }
+);
+
+// Chuyển hướng sang trang báo lỗi khi tìm kiếm từ khóa không có kết quả
 watch([status, filteredProducts], ([currentStatus, matches]) => {
-  if (currentStatus === 'success' && headerSearchTerm.value.trim() && matches.length === 0) {
-    navigateTo({ path: '/error', query: { search: headerSearchTerm.value } })
+  if (currentStatus === 'success' && searchQuery.value.trim() && matches.length === 0) {
+    navigateTo({ path: '/error', query: { search: searchQuery.value.trim() } });
   }
 });
 
 if (initialSearch && status.value === 'success' && filteredProducts.value.length === 0) {
-  await navigateTo({ path: '/error', query: { search: initialSearch } })
+  await navigateTo({ path: '/error', query: { search: initialSearch } });
 }
-
-function clearHeaderSearch() {
-  headerSearchTerm.value = ''
-}
-
-watch([selectedCategory, selectedPriceRange, onlyInStock, searchQuery], () => {
-  currentPage.value = 1;
-});
 
 const resetFilters = () => {
   selectedCategory.value = 'all';
   selectedPriceRange.value = 'all';
   onlyInStock.value = false;
   searchQuery.value = '';
-  clearHeaderSearch();
   sortBy.value = 'default';
   currentPage.value = 1;
 };

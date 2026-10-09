@@ -17,8 +17,56 @@ const form = reactive({
   note: "",
 });
 
+const errors = reactive({
+  name: "",
+  phone: "",
+  address: "",
+});
+
 const isSubmitting = ref(false);
 const errorMessage = ref("");
+
+
+const phoneRegex = /^0\d{9}$/;
+
+function validateName() {
+  if (!form.name.trim()) {
+    errors.name = "Vui lòng nhập họ và tên.";
+    return false;
+  }
+  errors.name = "";
+  return true;
+}
+
+function validatePhone() {
+  const cleanPhone = form.phone.trim().replace(/[\s.-]/g, "");
+  if (!cleanPhone) {
+    errors.phone = "Vui lòng nhập số điện thoại.";
+    return false;
+  }
+  if (!phoneRegex.test(cleanPhone)) {
+    errors.phone = "Số điện thoại không hợp lệ (phải gồm 10 chữ số và bắt đầu bằng số 0).";
+    return false;
+  }
+  errors.phone = "";
+  return true;
+}
+
+function validateAddress() {
+  if (!form.address.trim()) {
+    errors.address = "Vui lòng nhập địa chỉ nhận hàng.";
+    return false;
+  }
+  errors.address = "";
+  return true;
+}
+
+function validateForm() {
+  const isNameValid = validateName();
+  const isPhoneValid = validatePhone();
+  const isAddressValid = validateAddress();
+  return isNameValid && isPhoneValid && isAddressValid;
+}
 
 async function placeOrder() {
   errorMessage.value = "";
@@ -28,8 +76,7 @@ async function placeOrder() {
     return;
   }
 
-  if (!form.name.trim() || !form.phone.trim() || !form.address.trim()) {
-    errorMessage.value = "Vui lòng nhập đầy đủ thông tin nhận hàng.";
+  if (!validateForm()) {
     return;
   }
 
@@ -41,6 +88,7 @@ async function placeOrder() {
   isSubmitting.value = true;
 
   try {
+    const cleanPhone = form.phone.trim().replace(/[\s.-]/g, "");
     const response = await $fetch<{
       order: {
         id: number;
@@ -55,7 +103,7 @@ async function placeOrder() {
 
         shippingInfo: {
           name: form.name.trim(),
-          phone: form.phone.trim(),
+          phone: cleanPhone,
           address: form.address.trim(),
           note: form.note.trim(),
         },
@@ -66,10 +114,13 @@ async function placeOrder() {
     await refreshNuxtData();
 
     await navigateTo(`/orders/${response.order.id}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
 
-    errorMessage.value = "Không thể tạo đơn hàng. Vui lòng thử lại.";
+    errorMessage.value =
+      error?.data?.statusMessage ||
+      error?.statusMessage ||
+      "Không thể tạo đơn hàng. Vui lòng thử lại.";
   } finally {
     isSubmitting.value = false;
   }
@@ -96,7 +147,7 @@ async function placeOrder() {
       <section class="rounded-xl bg-white p-6 shadow">
         <h2 class="mb-6 text-xl font-bold">Thông tin nhận hàng</h2>
 
-        <form id="checkout-form" class="space-y-5" @submit.prevent="placeOrder">
+        <form id="checkout-form" class="space-y-5" novalidate @submit.prevent="placeOrder">
           <div>
             <label for="name" class="mb-2 block text-sm font-semibold">
               Họ tên
@@ -106,9 +157,13 @@ async function placeOrder() {
               id="name"
               v-model="form.name"
               type="text"
-              required
-              class="w-full rounded-lg border p-3"
+              :class="['w-full rounded-lg border p-3', errors.name ? 'border-red-500' : '']"
+              @input="errors.name && validateName()"
+              @blur="validateName"
             />
+            <p v-if="errors.name" class="mt-1 text-sm text-red-600">
+              {{ errors.name }}
+            </p>
           </div>
 
           <div>
@@ -120,9 +175,13 @@ async function placeOrder() {
               id="phone"
               v-model="form.phone"
               type="tel"
-              required
-              class="w-full rounded-lg border p-3"
+              :class="['w-full rounded-lg border p-3', errors.phone ? 'border-red-500' : '']"
+              @input="errors.phone && validatePhone()"
+              @blur="validatePhone"
             />
+            <p v-if="errors.phone" class="mt-1 text-sm text-red-600">
+              {{ errors.phone }}
+            </p>
           </div>
 
           <div>
@@ -133,10 +192,14 @@ async function placeOrder() {
             <textarea
               id="address"
               v-model="form.address"
-              required
               rows="3"
-              class="w-full rounded-lg border p-3"
+              :class="['w-full rounded-lg border p-3', errors.address ? 'border-red-500' : '']"
+              @input="errors.address && validateAddress()"
+              @blur="validateAddress"
             />
+            <p v-if="errors.address" class="mt-1 text-sm text-red-600">
+              {{ errors.address }}
+            </p>
           </div>
 
           <div>

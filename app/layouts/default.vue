@@ -25,12 +25,24 @@ async function handleLogout() {
   await navigateTo('/')
 }
 
+watch(
+  () => route.query.search,
+  (newSearch) => {
+    searchText.value = typeof newSearch === 'string' ? newSearch : ''
+  },
+  { immediate: true }
+)
+
 function submitSearch() {
   const query = searchText.value.trim()
   if (query) {
     navigateTo({ path: '/products', query: { search: query } })
+  } else {
+    // Nếu để trống ô tìm kiếm và bấm Enter/Tìm kiếm -> Quay về danh sách tất cả sản phẩm
+    navigateTo({ path: '/products' })
   }
 }
+
 </script>
 
 <template>
