@@ -27,7 +27,7 @@ const form = reactive<ProductFormData>({
   name: "",
   category: "phone",
   price: 0,
-  inStock: true,
+  inStock: false,
   stock: 0,
   image: "",
   description: "",
@@ -46,7 +46,7 @@ function fillFormFromProduct() {
   form.name = props.product.name;
   form.category = props.product.category;
   form.price = props.product.price;
-  form.inStock = props.product.inStock;
+  form.inStock = props.product.stock > 0;
   form.stock = props.product.stock;
   form.image = props.product.image;
   form.description = props.product.description;
@@ -74,8 +74,8 @@ function validateForm() {
     return false;
   }
 
-  if (form.price <= 0) {
-    errorMessage.value = "Giá sản phẩm phải lớn hơn 0.";
+  if (!Number.isFinite(form.price) || form.price <= 0) {
+    errorMessage.value = "Giá sản phẩm phải là số hợp lệ lớn hơn 0.";
     return false;
   }
 
@@ -129,7 +129,7 @@ function handleSubmit() {
     name: form.name.trim(),
     category: form.category,
     price: Number(form.price),
-    inStock: form.inStock,
+    inStock: Number(form.stock) > 0,
     stock: Number(form.stock),
     image: form.image.trim(),
     description: form.description.trim(),
@@ -253,9 +253,13 @@ const categoryOptions: {
 
     <!-- Stock -->
     <div>
-      <label for="product-quantity" class="mb-2 block text-sm font-semibold text-slate-700">
+      <label
+        for="product-quantity"
+        class="mb-2 block text-sm font-semibold text-slate-700"
+      >
         Số lượng tồn kho
       </label>
+
       <input
         id="product-quantity"
         v-model.number="form.stock"
@@ -266,23 +270,29 @@ const categoryOptions: {
       />
     </div>
 
+    <!-- Stock status -->
     <div>
-      <label
-        for="product-stock"
-        class="mb-2 block text-sm font-semibold text-slate-700"
-      >
+      <p class="mb-2 block text-sm font-semibold text-slate-700">
         Tình trạng hàng
-      </label>
+      </p>
 
-      <select
-        id="product-stock"
-        v-model="form.inStock"
-        class="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-teal-500"
+      <span
+        v-if="Number(form.stock) > 0"
+        class="inline-flex rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-700"
       >
-        <option :value="true">Còn hàng</option>
+        Còn hàng
+      </span>
 
-        <option :value="false">Hết hàng</option>
-      </select>
+      <span
+        v-else
+        class="inline-flex rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700"
+      >
+        Hết hàng
+      </span>
+
+      <p class="mt-2 text-xs text-slate-500">
+        Tình trạng hàng được tự động xác định theo số lượng tồn kho.
+      </p>
     </div>
 
     <!-- Image -->
