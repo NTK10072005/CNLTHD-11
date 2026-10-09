@@ -39,27 +39,14 @@
         <!-- Trạng thái kho hàng -->
         <div class="mt-3 flex items-center gap-2 text-xs font-semibold">
           <span
-            v-if="!product.inStock || product.stock <= 0"
-            class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-rose-700"
+            class="inline-flex items-center gap-1 rounded-md px-2.5 py-1"
+            :class="product.inStock && product.stock > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'"
           >
-            <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
-            Tạm hết hàng
-          </span>
-
-          <span
-            v-else-if="availableToBuy <= 0"
-            class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2.5 py-1 text-rose-700"
-          >
-            <span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>
-            Hết hàng (Bạn đã chọn hết {{ itemInCartCount }}/{{ product.stock }} vào giỏ)
-          </span>
-
-          <span
-            v-else
-            class="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2.5 py-1 text-emerald-700"
-          >
-            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-            Còn hàng trong kho ({{ product.stock }} sản phẩm)
+            <span
+              class="h-1.5 w-1.5 rounded-full"
+              :class="product.inStock && product.stock > 0 ? 'bg-emerald-500' : 'bg-rose-500'"
+            ></span>
+            {{ product.inStock && product.stock > 0 ? `Còn hàng trong kho (${product.stock} sản phẩm)` : 'Tạm hết hàng' }}
           </span>
         </div>
 
@@ -81,11 +68,11 @@
             <!-- Tăng giảm số lượng -->
             <div
               class="flex items-center rounded-xl border border-slate-200 bg-white shadow-sm"
-              :class="{ 'opacity-50 pointer-events-none bg-slate-100': !product.inStock || availableToBuy <= 0 }"
+              :class="{ 'opacity-50 pointer-events-none bg-slate-100': !product.inStock }"
             >
               <button
                 type="button"
-                :disabled="quantity <= 1 || !product.inStock || availableToBuy <= 0"
+                :disabled="quantity <= 1 || !product.inStock"
                 class="px-3.5 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                 @click="quantity--"
               >
@@ -94,9 +81,9 @@
               <span class="w-12 text-center text-sm font-semibold text-slate-800">{{ quantity }}</span>
               <button
                 type="button"
-                :disabled="quantity >= availableToBuy || !product.inStock"
+                :disabled="!product.inStock"
                 class="px-3.5 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-                @click="quantity++"
+                @click="incrementQuantity"
               >
                 +
               </button>
@@ -105,31 +92,24 @@
             <!-- Nút Thêm vào giỏ -->
             <button
               type="button"
-              :disabled="!product.inStock || availableToBuy <= 0"
+              :disabled="!product.inStock"
               class="flex items-center justify-center gap-2 rounded-xl border border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 shadow-sm transition hover:bg-blue-50 active:scale-95 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 sm:flex-initial"
               @click="handleAddToCart"
             >
               <img src="/icon/cart.svg" alt="Giỏ hàng" class="h-4 w-4" />
-              <span>{{ !product.inStock ? 'Hết hàng' : (availableToBuy <= 0 && itemInCartCount > 0 ? 'Đã thêm tối đa vào giỏ' : 'Thêm vào giỏ hàng') }}</span>
+              <span>{{ !product.inStock ? 'Hết hàng' : 'Thêm vào giỏ hàng' }}</span>
             </button>
 
             <!-- Nút Mua ngay -->
             <button
               type="button"
-              :disabled="!product.inStock || (availableToBuy <= 0 && itemInCartCount === 0)"
+              :disabled="!product.inStock"
               class="flex-1 rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-300 sm:flex-initial"
               @click="handleBuyNow"
             >
-              {{ availableToBuy <= 0 && itemInCartCount > 0 ? 'Thanh toán ngay' : 'Mua ngay' }}
+              Mua ngay
             </button>
           </div>
-
-          <!-- Thông báo hỗ trợ nếu đã chọn hết tồn kho vào giỏ -->
-          <p v-if="itemInCartCount > 0" class="mt-2.5 text-xs text-slate-500">
-            * Bạn đã có <span class="font-bold text-blue-600">{{ itemInCartCount }}</span> sản phẩm này trong giỏ hàng.
-            <span v-if="availableToBuy > 0"> Có thể thêm tối đa <span class="font-bold text-emerald-600">{{ availableToBuy }}</span> cái nữa.</span>
-            <span v-else class="font-semibold text-amber-600"> Đã đạt giới hạn tồn kho.</span>
-          </p>
         </div>
       </div>
     </div>
@@ -154,31 +134,6 @@
         </dl>
       </div>
     </div>
-
-    <!-- Toast Thông báo thêm giỏ hàng thành công -->
-    <Transition
-      enter-active-class="transform transition duration-300 ease-out"
-      enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:translate-x-4"
-      enter-to-class="translate-y-0 opacity-100 sm:translate-x-0"
-      leave-active-class="transition duration-200 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <div
-        v-if="cartToast.show"
-        class="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-sm"
-      >
-        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-600">
-          ✓
-        </div>
-        <div class="text-xs">
-          <p class="font-bold text-slate-800">{{ cartToast.message }}</p>
-          <p v-if="cartToast.subMessage" class="text-[11px] text-slate-500 line-clamp-1">
-            {{ cartToast.subMessage }}
-          </p>
-        </div>
-      </div>
-    </Transition>
   </div>
 
   <!-- Giao diện khi không tìm thấy sản phẩm -->
@@ -215,7 +170,7 @@
 import type { Product } from '~/types/product';
 
 const { formatPrice } = useFormatPrice();
-const { cart, addToCart, cartToast } = useCart();
+const { cart, addToCart, cartToast, triggerToast } = useCart();
 
 const route = useRoute();
 const { data: product } = await useFetch<Product>(`/api/products/${route.params.id}`);
@@ -252,6 +207,14 @@ watch(availableToBuy, (newAvailable) => {
   }
 });
 
+const incrementQuantity = () => {
+  if (availableToBuy.value <= 0 || quantity.value >= availableToBuy.value) {
+    triggerToast('Số lượng vượt quá tồn kho!', `Bạn chỉ có thể mua thêm tối đa ${availableToBuy.value} sản phẩm`);
+    return;
+  }
+  quantity.value++;
+};
+
 const formatCategory = (cat: string) => {
   const map: Record<string, string> = {
     phone: 'Điện thoại',
@@ -268,7 +231,12 @@ const onImageError = (e: Event) => {
 };
 
 const handleAddToCart = () => {
-  if (!product.value || !product.value.inStock || availableToBuy.value <= 0) return;
+  if (!product.value || !product.value.inStock) return;
+
+  if (availableToBuy.value <= 0) {
+    triggerToast('Số lượng vượt quá tồn kho!', `Bạn đã có tối đa ${product.value.stock} sản phẩm trong giỏ hàng`);
+    return;
+  }
 
   addToCart(
     {
