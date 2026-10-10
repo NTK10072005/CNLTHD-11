@@ -1,6 +1,7 @@
 export type ProductCategory = "phone" | "laptop" | "audio" | "accessory";
 
 export interface Product {
+  brand: string;
   id: number;
   name: string;
   category: ProductCategory;
@@ -24,5 +25,6 @@ export interface ProductFormData {
   stock: number;
   image: string;
   description: string;
+  brand: string;
   specs: Record<string, string>;
 }

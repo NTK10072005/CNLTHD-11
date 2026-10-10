@@ -48,6 +48,16 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+
+  const cleanPhone = body.shippingInfo.phone.replace(/[\s.-]/g, "");
+  const phoneRegex = /^0\d{9}$/;
+  if (!phoneRegex.test(cleanPhone)) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "Số điện thoại không hợp lệ (phải gồm 10 chữ số và bắt đầu bằng số 0)",
+    });
+  }
+
   // Kiểm tra tồn kho trước khi tạo đơn
   for (const item of body.items) {
     const product = mockProducts.find((p) => p.id === Number(item.id));
