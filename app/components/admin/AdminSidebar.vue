@@ -1,9 +1,21 @@
 <script setup lang="ts">
+import { authErrorMessage } from "~/utils/requestError";
 const { user, logout } = useAuth();
+const logoutError = ref("");
+const isLoggingOut = ref(false);
 
 async function handleLogout() {
-  logout();
-  await navigateTo("/login");
+  if (isLoggingOut.value) return;
+  isLoggingOut.value = true;
+  logoutError.value = "";
+  try {
+    await logout();
+    await navigateTo("/login");
+  } catch (error) {
+    logoutError.value = authErrorMessage(error, "logout");
+  } finally {
+    isLoggingOut.value = false;
+  }
 }
 
 const menuItems = [
@@ -51,12 +63,14 @@ const menuItems = [
     </nav>
 
     <div class="border-t border-slate-700 p-4">
+      <p v-if="logoutError" role="alert" class="mb-3 text-sm text-red-300">{{ logoutError }}</p>
       <button
         type="button"
+        :disabled="isLoggingOut"
         class="w-full rounded-lg bg-slate-800 px-4 py-3 text-left hover:bg-slate-700"
         @click="handleLogout"
       >
-        Đăng xuất
+        {{ isLoggingOut ? "Đang đăng xuất..." : "Đăng xuất" }}
       </button>
     </div>
   </aside>

@@ -1,11 +1,14 @@
 <script setup>
 import { ref } from 'vue'
 import { ShoppingCartIcon, UserCircleIcon } from '@heroicons/vue/24/outline'
+import { authErrorMessage } from '~/utils/requestError'
 
 const searchText = ref('')
 const activePanel = ref('')
 const route = useRoute()
-const { user, logout } = useAuth()
+const { user, logout, sessionError, refreshUser } = useAuth()
+const isCheckingSession = ref(false)
+const accountError = ref('')
 const { cart, totalItems, totalPrice, removeFromCart, cartToast } = useCart()
 const { formatPrice } = useFormatPrice()
 const accountLabel = computed(() => user.value?.name || user.value?.username || 'Tài khoản')
@@ -20,9 +23,20 @@ function togglePanel(panel) {
 }
 
 async function handleLogout() {
-  logout()
-  activePanel.value = ''
-  await navigateTo('/')
+  accountError.value = ''
+  try {
+    await logout()
+    activePanel.value = ''
+    await navigateTo('/')
+  } catch (error) {
+    accountError.value = authErrorMessage(error, 'logout')
+  }
+}
+
+async function retrySession() {
+  if (isCheckingSession.value) return
+  isCheckingSession.value = true
+  try { await refreshUser() } finally { isCheckingSession.value = false }
 }
 
 watch(
@@ -216,6 +230,13 @@ function submitSearch() {
         padding: 2rem 1rem;
       "
     >
+      <div v-if="sessionError" role="alert" class="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+        <p>{{ sessionError }}</p>
+        <button type="button" :disabled="isCheckingSession" class="mt-2 font-semibold underline disabled:opacity-50" @click="retrySession">
+          {{ isCheckingSession ? 'Đang kiểm tra...' : 'Thử lại phiên đăng nhập' }}
+        </button>
+      </div>
+      <p v-if="accountError" role="alert" class="mb-4 rounded-lg bg-red-50 p-4 text-red-700">{{ accountError }}</p>
       <slot />
     </main>
     <Footer />

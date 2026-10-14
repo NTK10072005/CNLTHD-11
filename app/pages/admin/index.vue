@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Order } from "~/types/order";
-import type { Product } from "~/types/product";
 
 definePageMeta({
   layout: "admin",
@@ -15,15 +14,14 @@ const {
   data: products,
   status: productStatus,
   error: productError,
-} = await useFetch<Product[]>("/api/products", {
-  default: () => [],
-});
+} = await useProducts();
 
 const {
   data: orders,
   status: orderStatus,
   error: orderError,
 } = await useFetch<Order[]>("/api/orders", {
+  key: "orders:admin",
   default: () => [],
 });
 

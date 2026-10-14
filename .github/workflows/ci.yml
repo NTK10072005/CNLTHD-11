@@ -1,0 +1,53 @@
+name: Nuxt CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Typecheck, build and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      NUXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build Nuxt
+        run: npm run build
+
+      - name: Test page rendering
+        run: npm run test:pages
+
+      - name: Test data flow
+        run: npm run test:data
+
+      - name: Test API, permissions and SSR
+        run: npm run test:auth

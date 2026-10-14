@@ -12,6 +12,7 @@ useHead({
 
 const route = useRoute();
 const id = computed(() => String(route.params.id));
+const { refreshProducts } = useShopData();
 
 const submitting = ref(false);
 const saveError = ref("");
@@ -22,7 +23,9 @@ const {
   status,
   error,
   refresh,
-} = await useFetch<Product>(() => `/api/products/${id.value}`);
+} = await useFetch<Product>(() => `/api/products/${Number(id.value)}`, {
+  key: () => `product:${Number(id.value)}`,
+});
 
 async function save(data: ProductFormData) {
   if (submitting.value) return;
@@ -37,8 +40,7 @@ async function save(data: ProductFormData) {
       body: data,
     });
 
-    await refresh();
-    await refreshNuxtData("admin-products-list");
+    await refreshProducts([id.value]);
 
     saveSuccess.value = "Đã lưu thay đổi sản phẩm.";
   } catch (cause: any) {

@@ -27,7 +27,6 @@ const form = reactive<ProductFormData>({
   name: "",
   category: "phone",
   price: 0,
-  inStock: false,
   stock: 0,
   image: "",
   description: "",
@@ -46,7 +45,6 @@ function fillFormFromProduct() {
   form.name = props.product.name;
   form.category = props.product.category;
   form.price = props.product.price;
-  form.inStock = props.product.stock > 0;
   form.stock = props.product.stock;
   form.image = props.product.image;
   form.description = props.product.description;
@@ -74,12 +72,12 @@ function validateForm() {
     return false;
   }
 
-  if (!Number.isFinite(form.price) || form.price <= 0) {
-    errorMessage.value = "Giá sản phẩm phải là số hợp lệ lớn hơn 0.";
+  if (!Number.isSafeInteger(form.price) || form.price <= 0) {
+    errorMessage.value = "Giá sản phẩm phải là số nguyên VND lớn hơn 0.";
     return false;
   }
 
-  if (!Number.isInteger(form.stock) || form.stock < 0) {
+  if (!Number.isSafeInteger(form.stock) || form.stock < 0) {
     errorMessage.value = "Số lượng tồn kho phải là số nguyên không âm.";
     return false;
   }
@@ -129,7 +127,6 @@ function handleSubmit() {
     name: form.name.trim(),
     category: form.category,
     price: Number(form.price),
-    inStock: Number(form.stock) > 0,
     stock: Number(form.stock),
     image: form.image.trim(),
     description: form.description.trim(),

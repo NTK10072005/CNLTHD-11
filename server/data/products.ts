@@ -1,16 +1,7 @@
 // server/data/products.ts
 
-export interface Product {
-  id: number;
-  name: string;
-  category: "phone" | "laptop" | "audio" | "accessory";
-  price: number;
-  inStock: boolean;
-  stock: number;
-  image: string;
-  description: string;
-  specs: Record<string, string>;
-}
+import type { Product } from "../../shared/types/product";
+export type { Product } from "../../shared/types/product";
 
 // Khai báo bằng "let" để sau này các API thêm/sửa/xóa của Admin có thể cập nhật trực tiếp vào mảng này
 export let mockProducts: Product[] = [
@@ -238,3 +229,10 @@ export let mockProducts: Product[] = [
     },
   },
 ];
+
+// Giữ bộ đếm riêng: xóa sản phẩm không làm lùi ID trong tiến trình mock server.
+let nextProductId = Math.max(0, ...mockProducts.map((product) => product.id)) + 1;
+
+export function getNextProductId() {
+  return nextProductId++;
+}

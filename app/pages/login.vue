@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { authErrorMessage } from '~/utils/requestError'
 
 const username = ref('')
 const password = ref('')
@@ -11,14 +12,19 @@ const { login } = useAuth()
 useHead({ title: 'Đăng nhập | Shop điện tử 11' })
 
 async function submitLogin() {
+  if (isSubmitting.value) return
   errorMessage.value = ''
+  if (!username.value.trim() || !password.value || password.value.length > 256) {
+    errorMessage.value = 'Vui lòng nhập tên đăng nhập và mật khẩu tối đa 256 ký tự.'
+    return
+  }
   isSubmitting.value = true
 
   try {
     const user = await login(username.value.trim(), password.value)
     await navigateTo(user.role === 'admin' ? '/admin' : '/')
-  } catch {
-    errorMessage.value = 'Tên đăng nhập hoặc mật khẩu chưa chính xác.'
+  } catch (error) {
+    errorMessage.value = authErrorMessage(error, 'login')
   } finally {
     isSubmitting.value = false
   }

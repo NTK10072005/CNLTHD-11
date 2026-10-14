@@ -1,19 +1,32 @@
 <script setup lang="ts">
 import type { Order } from "~/types/order";
+import { formatOrderDate } from "~/utils/orderDate";
+import { orderErrorMessage, canRetryOrder, requestErrorStatus } from "~/utils/requestError";
 
 definePageMeta({
   middleware: "auth",
+  validate: (route) => /^\d+$/.test(String(route.params.id)) &&
+    Number.isSafeInteger(Number(route.params.id)) && Number(route.params.id) > 0,
 });
 
 const route = useRoute();
+const requestFetch = useRequestFetch();
 
 const {
   data: order,
   status,
   error,
-} = await useAsyncData<Order>(`order-${route.params.id}`, () =>
-  $fetch(`/api/orders/${route.params.id}`),
+  refresh,
+} = await useAsyncData<Order>(() => `order:${Number(route.params.id)}`, () =>
+  requestFetch<Order>(`/api/orders/${route.params.id}`),
 );
+
+if (import.meta.server && error.value) {
+  const event = useRequestEvent();
+  if (event) setResponseStatus(event, requestErrorStatus(error.value) || 503);
+}
+
+useSeoMeta({ robots: "noindex, nofollow" });
 
 useHead(() => ({
   title: order.value
@@ -24,15 +37,19 @@ useHead(() => ({
 
 <template>
   <main class="mx-auto max-w-5xl px-4 py-10">
-    <div v-if="status === 'pending'" class="py-12 text-center">
+    <div v-if="status === 'pending'" role="status" class="py-12 text-center">
       Đang tải đơn hàng...
     </div>
 
     <div
       v-else-if="error"
+      role="alert"
       class="rounded-xl bg-red-50 p-8 text-center text-red-700"
     >
-      Không tìm thấy đơn hàng.
+      <p>{{ orderErrorMessage(error) }}</p>
+      <NuxtLink v-if="requestErrorStatus(error) === 401" to="/login" class="mt-3 inline-block font-semibold underline">Đăng nhập lại</NuxtLink>
+      <button v-else-if="canRetryOrder(error)" type="button" class="mt-3 font-semibold underline" @click="refresh()">Thử lại</button>
+      <NuxtLink to="/orders" class="mt-4 block font-semibold underline">Về lịch sử đơn hàng</NuxtLink>
     </div>
 
     <div v-else-if="order" class="space-y-6">
@@ -44,7 +61,7 @@ useHead(() => ({
         <h1 class="mt-3 text-3xl font-bold">Đơn hàng #{{ order.id }}</h1>
 
         <p class="mt-2 text-slate-500">
-          {{ new Date(order.createdAt).toLocaleString("vi-VN") }}
+          {{ formatOrderDate(order.createdAt) }}
         </p>
       </div>
 

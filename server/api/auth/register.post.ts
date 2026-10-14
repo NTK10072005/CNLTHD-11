@@ -1,4 +1,6 @@
 import { mockUsers } from '../../data/users'
+import { createServerSession, toPublicUser } from '../../utils/auth'
+import { hashPassword } from '../../utils/password'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody<{
@@ -41,10 +43,12 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Địa chỉ không được vượt quá 200 ký tự.' })
   }
 
-  if (password.length < 8) {
-    throw createError({ statusCode: 400, statusMessage: 'Mật khẩu cần ít nhất 8 ký tự.' })
+  if (password.length < 8 || password.length > 256) {
+    throw createError({ statusCode: 400, statusMessage: 'Mật khẩu cần từ 8 đến 256 ký tự.' })
   }
 
+  const passwordHash = await hashPassword(password)
+  // Kiểm tra trùng sau await để hai đăng ký đồng thời không cùng vượt qua.
   const alreadyRegistered = mockUsers.some(
     (candidate) => candidate.username.toLowerCase() === username.toLowerCase() || candidate.email.toLowerCase() === email,
   )
@@ -57,7 +61,7 @@ export default defineEventHandler(async (event) => {
     id: Math.max(0, ...mockUsers.map((candidate) => candidate.id)) + 1,
     username,
     email,
-    password,
+    passwordHash,
     name,
     phone,
     address,
@@ -65,6 +69,6 @@ export default defineEventHandler(async (event) => {
   }
   mockUsers.push(newUser)
 
-  const { password: _password, ...user } = newUser
-  return { user }
+  createServerSession(event, newUser.id)
+  return { user: toPublicUser(newUser) }
 })
