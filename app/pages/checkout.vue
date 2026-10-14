@@ -1,6 +1,7 @@
 <script setup lang="ts">
-const { cart, totalPrice, clearCart } = useCart();
+const { cart, totalPrice, clearCart, synchronizeCart } = useCart();
 const { user } = useAuth();
+const { refreshProducts, refreshOrders } = useShopData();
 
 definePageMeta({
   middleware: "auth",
@@ -25,6 +26,7 @@ const errors = reactive({
 
 const isSubmitting = ref(false);
 const errorMessage = ref("");
+const cartChanges = ref<string[]>([]);
 
 
 const phoneRegex = /^0\d{9}$/;
@@ -69,6 +71,7 @@ function validateForm() {
 }
 
 async function placeOrder() {
+  if (isSubmitting.value) return;
   errorMessage.value = "";
 
   if (cart.value.length === 0) {
@@ -88,6 +91,18 @@ async function placeOrder() {
   isSubmitting.value = true;
 
   try {
+    const changes = await synchronizeCart();
+    if (changes.length > 0) {
+      cartChanges.value = changes;
+      // Dừng để khách đọc giá/số lượng mới rồi tự xác nhận bằng lần bấm tiếp theo.
+      return;
+    }
+    if (cart.value.length === 0) {
+      errorMessage.value = "Giỏ hàng đang trống.";
+      return;
+    }
+    cartChanges.value = [];
+    const productIds = cart.value.map((item) => item.id);
     const cleanPhone = form.phone.trim().replace(/[\s.-]/g, "");
     const response = await $fetch<{
       order: {
@@ -97,9 +112,7 @@ async function placeOrder() {
       method: "POST",
 
       body: {
-        userId: user.value.id,
-
-        items: cart.value,
+        items: cart.value.map(({ id, quantity, price }) => ({ id, quantity, expectedPrice: price })),
 
         shippingInfo: {
           name: form.name.trim(),
@@ -111,15 +124,17 @@ async function placeOrder() {
     });
 
     clearCart();
-    await refreshNuxtData();
+    await Promise.all([refreshProducts(productIds), refreshOrders(response.order.id)]);
 
     await navigateTo(`/orders/${response.order.id}`);
   } catch (error: any) {
     console.error(error);
 
     errorMessage.value =
+      error?.data?.message ||
       error?.data?.statusMessage ||
       error?.statusMessage ||
+      error?.message ||
       "Không thể tạo đơn hàng. Vui lòng thử lại.";
   } finally {
     isSubmitting.value = false;
@@ -130,6 +145,14 @@ async function placeOrder() {
 <template>
   <main class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="mb-8 text-3xl font-bold text-slate-900">Thanh toán</h1>
+
+    <div v-if="cartChanges.length" role="alert" class="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-900">
+      <p class="font-semibold">Giỏ hàng đã được cập nhật.</p>
+      <ul class="mt-2 list-inside list-disc text-sm">
+        <li v-for="change in cartChanges" :key="change">{{ change }}</li>
+      </ul>
+      <p v-if="cart.length" class="mt-2 text-sm">Hãy kiểm tra tổng tiền mới. Nếu đồng ý, bấm “Đặt hàng COD” lần nữa.</p>
+    </div>
 
     <div
       v-if="cart.length === 0"
@@ -225,7 +248,7 @@ async function placeOrder() {
             </label>
           </div>
 
-          <p v-if="errorMessage" class="text-sm text-red-600">
+          <p v-if="errorMessage" role="alert" class="text-sm text-red-600">
             {{ errorMessage }}
           </p>
         </form>

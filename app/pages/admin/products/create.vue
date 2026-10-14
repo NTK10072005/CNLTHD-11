@@ -11,6 +11,7 @@ useHead({
 });
 
 const submitting = ref(false);
+const { refreshProducts } = useShopData();
 const errorMessage = ref("");
 
 async function handleSubmit(data: ProductFormData) {
@@ -25,7 +26,7 @@ async function handleSubmit(data: ProductFormData) {
       body: data,
     });
 
-    await refreshNuxtData("admin-products-list");
+    await refreshProducts();
     await navigateTo("/admin/products");
   } catch (error: any) {
     errorMessage.value =

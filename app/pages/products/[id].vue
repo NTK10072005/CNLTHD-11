@@ -1,6 +1,29 @@
 <!-- app/pages/products/[id].vue -->
 <template>
-  <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" v-if="product">
+  <section v-if="status === 'pending' || status === 'idle'" class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" role="status" aria-live="polite" aria-busy="true">
+    <p class="mb-6 text-sm text-slate-600">Đang tải thông tin sản phẩm...</p>
+    <div class="grid gap-10 lg:grid-cols-2" aria-hidden="true">
+      <div class="h-80 rounded-2xl bg-slate-200 motion-safe:animate-pulse"></div>
+      <div class="space-y-5">
+        <div class="h-8 w-3/4 rounded bg-slate-200 motion-safe:animate-pulse"></div>
+        <div class="h-12 w-1/2 rounded bg-slate-200 motion-safe:animate-pulse"></div>
+        <div class="h-24 rounded bg-slate-200 motion-safe:animate-pulse"></div>
+      </div>
+    </div>
+  </section>
+
+  <section v-else-if="error && !notFound" class="mx-auto max-w-3xl px-4 py-20 text-center" role="alert">
+    <h1 class="text-2xl font-extrabold text-slate-900">Chưa thể tải thông tin sản phẩm</h1>
+    <p class="mt-3 text-sm text-slate-600">Kết nối hoặc dịch vụ đang gặp sự cố. Bạn có thể thử lại.</p>
+    <div class="mt-8 flex flex-wrap justify-center gap-4">
+      <button type="button" class="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700" @click="retry">
+        Thử lại
+      </button>
+      <NuxtLink to="/products" class="rounded-xl border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700">Xem danh mục</NuxtLink>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" v-else-if="product && !notFound">
     <!-- Breadcrumb điều hướng -->
     <nav class="mb-6 flex items-center gap-2 text-xs text-slate-500">
       <NuxtLink to="/" class="transition hover:text-blue-600">Trang chủ</NuxtLink>
@@ -173,15 +196,43 @@ const { formatPrice } = useFormatPrice();
 const { cart, addToCart, cartToast, triggerToast } = useCart();
 
 const route = useRoute();
-const { data: product } = await useFetch<Product>(`/api/products/${route.params.id}`);
+definePageMeta({
+  validate: (route) => typeof route.params.id === 'string' && /^\d+$/.test(route.params.id) &&
+    Number.isSafeInteger(Number(route.params.id)) && Number(route.params.id) > 0,
+});
 
-useHead(() => ({
-  title: product.value
-    ? `${product.value.name} | Chi Tiết Sản Phẩm`
-    : 'Không tìm thấy sản phẩm | Shop điện tử 11',
-}));
+const { data: product, status, error, refresh } = await useFetch<Product>(
+  () => `/api/products/${Number(route.params.id)}`,
+  { key: () => `product:${Number(route.params.id)}`, lazy: true },
+);
+const notFound = computed(() => error.value?.statusCode === 404 ||
+  (status.value === 'success' && !product.value));
+
+// HTTP status của document SSR phải phản ánh lỗi, không trả 200 cho trang 404.
+if (import.meta.server) {
+  const event = useRequestEvent();
+  if (event && notFound.value) setResponseStatus(event, 404);
+  else if (event && error.value) {
+    const code = error.value.statusCode;
+    setResponseStatus(event, code && code >= 400 && code <= 599 ? code : 503);
+  }
+}
+
+async function retry() {
+  await refresh();
+}
+
+useSeoMeta({
+  title: () => notFound.value ? 'Không tìm thấy sản phẩm | Shop điện tử 11'
+    : error.value ? 'Chưa thể tải sản phẩm | Shop điện tử 11'
+    : product.value ? `${product.value.name} | Shop điện tử 11` : 'Đang tải sản phẩm | Shop điện tử 11',
+  description: () => error.value || notFound.value ? 'Xem danh mục sản phẩm của Shop điện tử 11.'
+    : product.value?.description ?? 'Thông tin sản phẩm tại Shop điện tử 11.',
+  robots: () => error.value || notFound.value ? 'noindex, nofollow' : 'index, follow',
+});
 
 const quantity = ref(1);
+watch(() => route.params.id, () => { quantity.value = 1; });
 
 // Đếm số lượng sản phẩm này đã có trong giỏ hàng
 const itemInCartCount = computed(() => {

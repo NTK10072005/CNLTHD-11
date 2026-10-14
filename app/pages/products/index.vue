@@ -170,8 +170,6 @@
 </template>
 
 <script setup lang="ts">
-import type { Product } from '~/types/product';
-
 const route = useRoute();
 const router = useRouter();
 const { cartToast } = useCart();
@@ -183,15 +181,8 @@ useSeoMeta({
   description: 'Khám phá điện thoại, laptop, thiết bị âm thanh và phụ kiện công nghệ hàng đầu.',
 });
 
-// Luôn lấy dữ liệu tồn kho mới nhất từ server khi vào trang
-const { data: products, status, error, refresh } = await useFetch<Product[]>('/api/products', {
-  key: 'products-list',
-  default: () => [],
-});
-
-onMounted(() => {
-  refresh();
-});
+// Tái sử dụng payload SSR; làm mới khi có thao tác thay đổi sản phẩm/tồn kho.
+const { data: products, status, error, refresh } = await useProducts();
 
 
 // Danh mục và khoảng giá định nghĩa chuẩn

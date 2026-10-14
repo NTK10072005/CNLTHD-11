@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import { authErrorMessage } from '~/utils/requestError'
 
 const form = reactive({
   name: '',
@@ -62,7 +63,7 @@ function validateForm() {
   else if (address.length > 200) errors.address = 'Địa chỉ không được vượt quá 200 ký tự.'
 
   if (!form.password) errors.password = 'Vui lòng nhập mật khẩu.'
-  else if (form.password.length < 8) errors.password = 'Mật khẩu cần ít nhất 8 ký tự.'
+  else if (form.password.length < 8 || form.password.length > 256) errors.password = 'Mật khẩu cần từ 8 đến 256 ký tự.'
 
   if (!form.confirmPassword) errors.confirmPassword = 'Vui lòng xác nhận mật khẩu.'
   else if (form.password !== form.confirmPassword) errors.confirmPassword = 'Mật khẩu xác nhận không khớp.'
@@ -75,6 +76,7 @@ function clearFieldError(field: keyof typeof errors) {
 }
 
 async function submitRegistration() {
+  if (isSubmitting.value) return
   errorMessage.value = ''
 
   if (!validateForm()) return
@@ -91,8 +93,8 @@ async function submitRegistration() {
       password: form.password,
     })
     await navigateTo('/')
-  } catch {
-    errorMessage.value = 'Không thể tạo tài khoản. Username hoặc email có thể đã được sử dụng.'
+  } catch (error) {
+    errorMessage.value = authErrorMessage(error, 'register')
   } finally {
     isSubmitting.value = false
   }

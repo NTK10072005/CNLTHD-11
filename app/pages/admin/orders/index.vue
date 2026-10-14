@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { Order, OrderStatus } from "~/types/order";
+import { formatOrderDate } from "~/utils/orderDate";
 
 definePageMeta({ layout: "admin", middleware: "admin" });
 useHead({ title: "Quản lý đơn hàng | Shop điện tử 11" });
 
 const { formatPrice } = useFormatPrice();
+const { refreshOrders, refreshProducts } = useShopData();
 
 const search = ref("");
 const selectedStatus = ref<OrderStatus | "all">("all");
@@ -17,7 +19,7 @@ const {
   error,
   refresh,
 } = await useFetch<Order[]>("/api/orders", {
-  key: "admin-orders-list",
+  key: "orders:admin",
   default: () => [],
 });
 
@@ -46,13 +48,6 @@ const filteredOrders = computed(() => {
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 });
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
 async function updateOrderStatus(order: Order, newStatus: OrderStatus) {
   if (updatingId.value !== null) return;
 
@@ -75,7 +70,10 @@ async function updateOrderStatus(order: Order, newStatus: OrderStatus) {
       },
     });
 
-    await refresh();
+    await Promise.all([
+      refreshOrders(order.id),
+      newStatus === "cancelled" ? refreshProducts(order.items.map((item) => item.id)) : Promise.resolve(),
+    ]);
   } catch (cause: any) {
     actionError.value =
       cause?.data?.statusMessage ||
@@ -204,7 +202,7 @@ async function updateOrderStatus(order: Order, newStatus: OrderStatus) {
                 </td>
 
                 <td class="whitespace-nowrap px-5 py-4 text-slate-700">
-                  {{ formatDate(order.createdAt) }}
+                  {{ formatOrderDate(order.createdAt) }}
                 </td>
 
                 <td class="px-5 py-4 text-slate-700">
