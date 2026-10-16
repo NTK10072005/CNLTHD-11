@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { Order } from "~/types/order";
+import { formatOrderDate } from "~/utils/orderDate";
+import { orderErrorMessage, canRetryOrder, requestErrorStatus } from "~/utils/requestError";
 
 definePageMeta({
   middleware: "auth",
@@ -17,10 +19,8 @@ const {
   error,
   refresh,
 } = await useFetch<Order[]>("/api/orders", {
-  query: {
-    userId: user.value?.id,
-  },
-
+  key: () => `orders:customer-${user.value?.id}`,
+  query: { userId: user.value?.id },
   default: () => [],
 });
 
@@ -51,8 +51,10 @@ async function handleRefresh() {
       Đang tải đơn hàng...
     </div>
 
-    <div v-else-if="error" class="rounded-lg bg-red-50 p-5 text-red-700">
-      Không thể tải lịch sử đơn hàng.
+    <div v-else-if="error" role="alert" class="rounded-lg bg-red-50 p-5 text-red-700">
+      <p>{{ orderErrorMessage(error) }}</p>
+      <NuxtLink v-if="requestErrorStatus(error) === 401" to="/login" class="mt-3 inline-block font-semibold underline">Đăng nhập lại</NuxtLink>
+      <button v-else-if="canRetryOrder(error)" type="button" class="mt-3 font-semibold underline" @click="handleRefresh">Thử lại</button>
     </div>
 
     <div
@@ -87,7 +89,7 @@ async function handleRefresh() {
             <td class="p-4 font-semibold">#{{ order.id }}</td>
 
             <td class="p-4">
-              {{ new Date(order.createdAt).toLocaleString("vi-VN") }}
+              {{ formatOrderDate(order.createdAt) }}
             </td>
 
             <td class="p-4">{{ order.total.toLocaleString("vi-VN") }} ₫</td>

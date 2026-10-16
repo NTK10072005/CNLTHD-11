@@ -1,20 +1,16 @@
 // app/composables/useCart.ts
-export interface CartItem {
-    id: number | string;
-    name: string;
-    price: number;
-    image: string;
-    quantity: number;
-    stock?: number;
-}
+import type { CartItem } from "~~/shared/types/cart";
+import type { Product } from "~~/shared/types/product";
+import { readStoredCart, writeStoredCart, reconcileCart } from "~/utils/cart";
+export type { CartItem } from "~~/shared/types/cart";
 
-// Quản lý timer và cờ khởi tạo ở module scope để dùng chung đồng bộ toàn ứng dụng
+// Timer toast dùng chung ở client; cờ khởi tạo giỏ được quản lý bằng useState.
 let toastTimer: ReturnType<typeof setTimeout> | null = null;
-let isCartInitialized = false;
 
 export const useCart = () => {
     // SSR-friendly state dùng chung toàn ứng dụng (Nuxt useState)
     const cart = useState<CartItem[]>('cart', () => []);
+    const isCartInitialized = useState<boolean>('cart_initialized', () => false);
 
     // State thông báo toast toàn cục khi thêm sản phẩm
     const cartToast = useState<{ show: boolean; message: string; subMessage?: string }>('cart_toast', () => ({
@@ -36,15 +32,13 @@ export const useCart = () => {
 
     // Chỉ đọc từ localStorage một lần duy nhất trên Client sau khi mount (tránh lỗi Hydration Mismatch)
     onMounted(() => {
-        if (!isCartInitialized && import.meta.client) {
-            isCartInitialized = true;
-            const saved = localStorage.getItem('nuxt_cart');
-            if (saved && cart.value.length === 0) {
-                try {
-                    cart.value = JSON.parse(saved);
-                } catch (e) {
-                    console.error('Không thể đọc giỏ hàng từ localStorage', e);
-                }
+        if (!isCartInitialized.value && import.meta.client) {
+            isCartInitialized.value = true;
+            // Truy cập chính localStorage cũng có thể ném SecurityError.
+            try {
+                if (cart.value.length === 0) cart.value = readStoredCart(localStorage);
+            } catch {
+                // Giữ giỏ trong bộ nhớ khi trình duyệt không cho truy cập storage.
             }
         }
     });
@@ -52,8 +46,25 @@ export const useCart = () => {
     // Tự động lưu localStorage mỗi khi giỏ hàng thay đổi (chỉ chạy ở client)
     const saveCart = () => {
         if (import.meta.client) {
-            localStorage.setItem('nuxt_cart', JSON.stringify(cart.value));
+            try {
+                writeStoredCart(localStorage, cart.value);
+            } catch {
+                // Storage không khả dụng không được làm hỏng thao tác giỏ hàng.
+            }
         }
+    };
+
+    const synchronizeCart = async () => {
+        const snapshot = JSON.stringify(cart.value);
+        // Lấy dữ liệu mới trực tiếp, không dùng payload/catalog đã cache trong Nuxt.
+        const products = await $fetch<Product[]>('/api/products', { cache: 'no-store' });
+        if (snapshot !== JSON.stringify(cart.value)) {
+            throw new Error('Giỏ hàng vừa thay đổi. Vui lòng kiểm tra và thử lại.');
+        }
+        const result = reconcileCart(cart.value, products);
+        cart.value = result.items;
+        saveCart();
+        return result.changes;
     };
 
     // Thêm vào giỏ
@@ -63,6 +74,10 @@ export const useCart = () => {
     ) => {
         const prodId = Number(product.id);
         const maxStock = product.stock ?? 99;
+        if (!Number.isSafeInteger(prodId) || prodId <= 0 ||
+            !Number.isSafeInteger(quantity) || quantity <= 0 ||
+            !Number.isSafeInteger(product.price) || product.price <= 0 ||
+            !Number.isSafeInteger(maxStock) || maxStock < 0) return false;
         const existing = cart.value.find((item) => Number(item.id) === prodId);
 
         if (existing) {
@@ -72,6 +87,9 @@ export const useCart = () => {
                 return false;
             }
             existing.quantity = newTotal;
+            existing.price = product.price;
+            existing.name = product.name;
+            existing.image = product.image;
             if (product.stock !== undefined) existing.stock = product.stock;
         } else {
             if (quantity > maxStock) {
@@ -94,6 +112,7 @@ export const useCart = () => {
 
     // Cập nhật số lượng
     const updateQuantity = (id: number | string, quantity: number) => {
+        if (!Number.isSafeInteger(quantity)) return false;
         const targetId = Number(id);
         const item = cart.value.find((i) => Number(i.id) === targetId);
         if (item) {
@@ -143,6 +162,7 @@ export const useCart = () => {
         updateQuantity,
         removeFromCart,
         clearCart,
+        synchronizeCart,
         totalItems,
         totalPrice,
     };

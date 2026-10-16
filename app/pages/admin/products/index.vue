@@ -11,6 +11,7 @@ useHead({
 });
 
 const { formatPrice } = useFormatPrice();
+const { refreshProducts } = useShopData();
 
 const searchQuery = ref("");
 const selectedCategory = ref<ProductCategory | "all">("all");
@@ -22,10 +23,7 @@ const {
   status,
   error,
   refresh,
-} = await useFetch<Product[]>("/api/products", {
-  key: "admin-products-list",
-  default: () => [],
-});
+} = await useProducts();
 
 const categories: {
   value: ProductCategory | "all";
@@ -74,11 +72,11 @@ async function deleteProduct(product: Product) {
       method: "DELETE",
     });
 
-    await refresh();
+    await refreshProducts([product.id]);
   } catch (cause: any) {
     actionError.value =
-      cause?.data?.statusMessage ||
       cause?.data?.message ||
+      cause?.data?.statusMessage ||
       cause?.message ||
       "Không thể xóa sản phẩm. Vui lòng thử lại.";
   } finally {

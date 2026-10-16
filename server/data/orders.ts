@@ -1,4 +1,4 @@
-import type { Order } from "~/types/order";
+import type { Order } from "../../shared/types/order";
 export let mockOrders: Order[] = [];
 
 export function getNextOrderId() {
