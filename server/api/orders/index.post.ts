@@ -25,8 +25,8 @@ export default defineEventHandler(async (event) => {
 
   const shipping = body.shippingInfo;
   if (!isRecord(shipping) || typeof shipping.name !== "string" ||
-      typeof shipping.phone !== "string" || typeof shipping.address !== "string" ||
-      (shipping.note !== undefined && typeof shipping.note !== "string")) {
+    typeof shipping.phone !== "string" || typeof shipping.address !== "string" ||
+    (shipping.note !== undefined && typeof shipping.note !== "string")) {
     throw createError({
       statusCode: 400,
       statusMessage: "Thông tin nhận hàng chưa đầy đủ",
@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
     const id = typeof item.id === "number" ? item.id
       : typeof item.id === "string" && /^\d+$/.test(item.id.trim()) ? Number(item.id.trim()) : NaN;
     if (!Number.isSafeInteger(id) || id <= 0 || typeof item.quantity !== "number" ||
-        !Number.isSafeInteger(item.quantity) || item.quantity <= 0) {
+      !Number.isSafeInteger(item.quantity) || item.quantity <= 0) {
       throw createError({
         statusCode: 400,
         statusMessage: "Mã sản phẩm và số lượng phải là số nguyên dương hợp lệ.",
@@ -77,8 +77,10 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 400, statusMessage: "Invalid expected price" });
       }
       if (expectedPrices.has(id) && expectedPrices.get(id) !== item.expectedPrice) {
-        throw createError({ statusCode: 409, statusMessage: "Conflicting expected prices",
-          message: "Giá trong giỏ hàng không nhất quán. Vui lòng kiểm tra lại." });
+        throw createError({
+          statusCode: 409, statusMessage: "Conflicting expected prices",
+          message: "Giá trong giỏ hàng không nhất quán. Vui lòng kiểm tra lại."
+        });
       }
       expectedPrices.set(id, item.expectedPrice);
     }
@@ -100,12 +102,14 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, statusMessage: `Không tìm thấy sản phẩm có mã #${id}.` });
     }
     if (!Number.isSafeInteger(product.price) || product.price <= 0 ||
-        !Number.isSafeInteger(product.stock) || product.stock < 0) {
+      !Number.isSafeInteger(product.stock) || product.stock < 0) {
       throw createError({ statusCode: 500, statusMessage: "Dữ liệu giá hoặc tồn kho sản phẩm không hợp lệ." });
     }
     if (expectedPrices.has(id) && expectedPrices.get(id) !== product.price) {
-      throw createError({ statusCode: 409, statusMessage: "Product price changed",
-        message: `Giá sản phẩm "${product.name}" vừa thay đổi. Vui lòng bấm đặt hàng lại để cập nhật giỏ và xác nhận tổng tiền mới.` });
+      throw createError({
+        statusCode: 409, statusMessage: "Product price changed",
+        message: `Giá sản phẩm "${product.name}" vừa thay đổi. Vui lòng bấm đặt hàng lại để cập nhật giỏ và xác nhận tổng tiền mới.`
+      });
     }
     if (!product.inStock || quantity > product.stock) {
       throw createError({
@@ -118,10 +122,10 @@ export default defineEventHandler(async (event) => {
     if (!Number.isSafeInteger(total)) {
       throw createError({ statusCode: 400, statusMessage: "Tổng giá trị đơn hàng vượt giới hạn cho phép." });
     }
-
-    // Lưu thông tin mua hàng từ server, không tin giá/tên/ảnh từ client.
-    items.push({ id: product.id, name: product.name, price: product.price,
-      image: product.image, quantity });
+    items.push({
+      id: product.id, name: product.name, price: product.price,
+      image: product.image, quantity
+    });
     reservations.push({ product, quantity });
   }
 
@@ -148,9 +152,7 @@ export default defineEventHandler(async (event) => {
     createdAt: new Date().toISOString(),
   };
 
-  // Chỉ thay đổi dữ liệu sau khi TẤT CẢ dòng hợp lệ. Không await trong đoạn này
-  // để kiểm tra/trừ kho không bị xen kẽ request trong một tiến trình mock server.
-  // Khi chuyển sang database, thay đoạn này bằng transaction.
+
   for (const { product, quantity } of reservations) {
     product.stock -= quantity;
     product.inStock = product.stock > 0;

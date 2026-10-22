@@ -77,7 +77,7 @@
                   :disabled="item.quantity >= (item.stock ?? 99)"
                   class="px-2.5 py-1 text-xs font-bold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
                   @click="updateQuantity(item.id, item.quantity + 1)"
-                  :title="item.quantity >= (item.stock ?? 99) ? `Đã đạt giới hạn tồn kho (${item.stock ?? 99} cái)` : ''"
+                  :title="item.quantity >= (item.stock ?? 99) ? 'Bạn không thể mua thêm sản phẩm này' : ''"
                 >
                   +
                 </button>
