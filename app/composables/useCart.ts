@@ -83,7 +83,7 @@ export const useCart = () => {
         if (existing) {
             const newTotal = existing.quantity + quantity;
             if (newTotal > maxStock) {
-                triggerToast('Số lượng vượt quá tồn kho!', `Kho chỉ còn ${maxStock} sản phẩm`);
+                triggerToast('Bạn không thể mua thêm sản phẩm này');
                 return false;
             }
             existing.quantity = newTotal;
@@ -93,7 +93,7 @@ export const useCart = () => {
             if (product.stock !== undefined) existing.stock = product.stock;
         } else {
             if (quantity > maxStock) {
-                triggerToast('Số lượng vượt quá tồn kho!', `Kho chỉ còn ${maxStock} sản phẩm`);
+                triggerToast('Bạn không thể mua thêm sản phẩm này');
                 return false;
             }
             cart.value.push({
@@ -121,7 +121,7 @@ export const useCart = () => {
             } else {
                 const maxStock = item.stock ?? 99;
                 if (quantity > maxStock) {
-                    triggerToast('Đã chạm giới hạn tồn kho!', `Chỉ còn ${maxStock} sản phẩm`);
+                    triggerToast('Bạn không thể mua thêm sản phẩm này');
                     return false;
                 }
                 item.quantity = quantity;

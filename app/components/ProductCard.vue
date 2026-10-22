@@ -124,7 +124,7 @@ const handleAddToCart = () => {
   if (!props.product.inStock) return;
 
   if (isMaxInCart.value) {
-    triggerToast('Số lượng vượt quá tồn kho!', `Bạn đã có tối đa ${props.product.stock} sản phẩm trong giỏ hàng`);
+    triggerToast('Bạn không thể mua thêm sản phẩm này');
     return;
   }
 

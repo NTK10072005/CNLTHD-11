@@ -205,10 +205,12 @@ const { data: product, status, error, refresh } = await useFetch<Product>(
   () => `/api/products/${Number(route.params.id)}`,
   { key: () => `product:${Number(route.params.id)}`, lazy: true },
 );
+
+
 const notFound = computed(() => error.value?.statusCode === 404 ||
   (status.value === 'success' && !product.value));
 
-// HTTP status của document SSR phải phản ánh lỗi, không trả 200 cho trang 404.
+
 if (import.meta.server) {
   const event = useRequestEvent();
   if (event && notFound.value) setResponseStatus(event, 404);
@@ -260,7 +262,7 @@ watch(availableToBuy, (newAvailable) => {
 
 const incrementQuantity = () => {
   if (availableToBuy.value <= 0 || quantity.value >= availableToBuy.value) {
-    triggerToast('Số lượng vượt quá tồn kho!', `Bạn chỉ có thể mua thêm tối đa ${availableToBuy.value} sản phẩm`);
+    triggerToast('Bạn không thể mua thêm sản phẩm này');
     return;
   }
   quantity.value++;
@@ -285,7 +287,7 @@ const handleAddToCart = () => {
   if (!product.value || !product.value.inStock) return;
 
   if (availableToBuy.value <= 0) {
-    triggerToast('Số lượng vượt quá tồn kho!', `Bạn đã có tối đa ${product.value.stock} sản phẩm trong giỏ hàng`);
+    triggerToast('Bạn không thể mua thêm sản phẩm này');
     return;
   }
 
