@@ -10,8 +10,5 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ["@nuxtjs/tailwindcss"],
 
-  // Cấu hình Hybrid Rendering: Phân hệ Admin chạy SPA thuần túy (Client-only)
-  routeRules: {
-    "/admin/**": { ssr: false },
-  },
+
 });
