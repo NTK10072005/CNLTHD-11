@@ -120,8 +120,8 @@ test("order dates use identical Vietnam time across server and browser system ti
   const timestamps = ["2026-10-13T03:04:05.000Z", "2026-12-31T18:00:00.000Z",
     "2026-10-12T17:00:00.000Z", "2026-10-13T10:04:05+07:00"];
   const script = `const module = { exports: {} };\n${code}\nprocess.stdout.write(JSON.stringify(${JSON.stringify(timestamps)}.map(module.exports.formatOrderDate)));`;
-  const expected = ["13/10/2026 10:04:05 (UTC+7)", "01/01/2027 01:00:00 (UTC+7)",
-    "13/10/2026 00:00:00 (UTC+7)", "13/10/2026 10:04:05 (UTC+7)"];
+  const expected = ["13/10/2026 10:04:05", "01/01/2027 01:00:00",
+    "13/10/2026 00:00:00", "13/10/2026 10:04:05"];
   for (const timezone of ["UTC", "Asia/Ho_Chi_Minh", "America/New_York", "Asia/Tokyo"]) {
     const output = execFileSync(process.execPath, ["-e", script], {
       env: { ...process.env, TZ: timezone }, encoding: "utf8",

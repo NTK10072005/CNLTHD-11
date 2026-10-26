@@ -11,6 +11,11 @@ definePageMeta({
 
 const route = useRoute();
 const requestFetch = useRequestFetch();
+const { user } = useAuth();
+const { refreshOrders, refreshProducts } = useShopData();
+const isCancelling = ref(false);
+const cancelError = ref("");
+const cancelSuccess = ref("");
 
 const {
   data: order,
@@ -20,6 +25,43 @@ const {
 } = await useAsyncData<Order>(() => `order:${Number(route.params.id)}`, () =>
   requestFetch<Order>(`/api/orders/${route.params.id}`),
 );
+
+const canCancel = computed(() => order.value?.userId === user.value?.id &&
+  order.value?.status === "pending");
+
+async function cancelOrder() {
+  if (!order.value || !canCancel.value || isCancelling.value) return;
+  if (!window.confirm(`Bạn có chắc muốn hủy đơn hàng #${order.value.id}?`)) return;
+  const currentOrder = order.value;
+  isCancelling.value = true;
+  cancelError.value = "";
+  cancelSuccess.value = "";
+  try {
+    const response = await $fetch<{ order: Order }>(`/api/orders/${currentOrder.id}/cancel`, {
+      method: "POST", body: {},
+    });
+    // Cập nhật ngay sau khi API thành công, kể cả khi làm mới dữ liệu gặp lỗi.
+    order.value = response.order;
+    cancelSuccess.value = "Đã hủy đơn hàng thành công.";
+    const results = await Promise.allSettled([
+      refreshOrders(currentOrder.id),
+      refreshProducts(currentOrder.items.map((item) => item.id)),
+    ]);
+    if (results.some((result) => result.status === "rejected")) {
+      cancelError.value = "Đơn đã được hủy, nhưng chưa thể làm mới đầy đủ dữ liệu. Vui lòng tải lại trang.";
+    }
+  } catch (cause: unknown) {
+    const code = requestErrorStatus(cause);
+    cancelError.value = code === 401 ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+      : code === 403 ? "Bạn không có quyền hủy đơn hàng này."
+      : code === 409 ? "Không thể hủy đơn. Trạng thái đơn hoặc tồn kho có thể đã thay đổi. Vui lòng tải lại đơn hàng."
+      : "Chưa thể hủy đơn hàng. Vui lòng thử lại.";
+    // Đồng bộ lại nếu admin vừa xác nhận hoặc hủy đơn ở phiên khác.
+    if (code === 409) await refresh();
+  } finally {
+    isCancelling.value = false;
+  }
+}
 
 if (import.meta.server && error.value) {
   const event = useRequestEvent();
@@ -148,6 +190,20 @@ useHead(() => ({
             <strong> {{ order.total.toLocaleString("vi-VN") }} ₫ </strong>
           </div>
         </div>
+      </section>
+
+      <section v-if="canCancel || cancelSuccess || cancelError || order.status === 'cancelled'" class="rounded-xl bg-white p-6 shadow">
+        <p v-if="cancelSuccess" role="status" class="text-green-700">{{ cancelSuccess }}</p>
+        <p v-if="cancelError" role="alert" class="mb-3 text-red-700">{{ cancelError }}</p>
+        <template v-if="canCancel">
+          <p class="mb-3 text-sm text-slate-600">Bạn có thể hủy đơn khi đơn hàng còn chờ xác nhận.</p>
+          <button type="button" :disabled="isCancelling"
+            class="rounded-lg bg-red-600 px-5 py-3 font-semibold text-white disabled:opacity-60"
+            @click="cancelOrder">
+            {{ isCancelling ? "Đang hủy..." : "Hủy đơn hàng" }}
+          </button>
+        </template>
+        <p v-else-if="order.status === 'cancelled'" class="text-slate-600">Đơn hàng đã được hủy.</p>
       </section>
     </div>
   </main>
