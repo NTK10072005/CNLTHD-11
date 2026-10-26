@@ -13,13 +13,20 @@ const orderDateFormatter = new Intl.DateTimeFormat("vi-VN", {
 
 export function formatOrderDate(value: string): string {
   // API lưu ISO có Z/offset. Không suy diễn ngày thiếu múi giờ theo máy đang chạy.
-  if (typeof value !== "string" || !value.includes("T") ||
-      !/(Z|[+-]\d{2}:\d{2})$/i.test(value)) return "Không rõ thời gian";
+  if (
+    typeof value !== "string" ||
+    !value.includes("T") ||
+    !/(Z|[+-]\d{2}:\d{2})$/i.test(value)
+  )
+    return "Không rõ thời gian";
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "Không rõ thời gian";
 
-  const parts = Object.fromEntries(orderDateFormatter.formatToParts(date)
-    .map(({ type, value }) => [type, value]));
+  const parts = Object.fromEntries(
+    orderDateFormatter
+      .formatToParts(date)
+      .map(({ type, value }) => [type, value]),
+  );
   // Ghép cùng một định dạng, không phụ thuộc dấu phân cách của ICU trên mỗi máy.
-  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}:${parts.second} (UTC+7)`;
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}:${parts.second}`;
 }

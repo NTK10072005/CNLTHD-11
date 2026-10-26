@@ -204,6 +204,59 @@ test("session, password hashing and API permissions", { timeout: 60000 }, async 
       return result.data.product;
     }
 
+    await t.test("customers cancel only their own pending orders and restore stock once", async () => {
+      const product = await createStockTestProduct("Customer cancellation", 3);
+      const createOrder = async () => {
+        const result = await request("/api/orders", { method: "POST", cookie: customerCookie,
+          body: { items: [{ id: product.id, quantity: 1 }], shippingInfo } });
+        assert.equal(result.response.status, 200);
+        return result.data.order;
+      };
+      const order = await createOrder();
+      const path = `/api/orders/${order.id}/cancel`;
+      const cancel = { method: "POST", body: {} };
+      assert.equal((await request(path, cancel)).response.status, 401);
+      assert.equal((await request(path, { ...cancel, cookie: otherCookie,
+        body: { userId: 1 } })).response.status, 403);
+      assert.equal((await request(`/api/orders/${order.id}`, { cookie: customerCookie })).data.status, "pending");
+      assert.equal((await request(`/api/products/${product.id}`)).data.stock, 2);
+      const cancelled = await Promise.all([1, 2].map(() => request(path, { ...cancel, cookie: customerCookie })));
+      assert.deepEqual(cancelled.map((result) => result.response.status).sort(), [200, 409]);
+      assert.equal((await request(`/api/orders/${order.id}`, { cookie: customerCookie })).data.status, "cancelled");
+      assert.equal((await request(`/api/products/${product.id}`)).data.stock, 3);
+      assert.equal((await request(`/api/orders/${order.id}`, { method: "PUT", cookie: adminCookie,
+        body: { status: "cancelled" } })).response.status, 400);
+      assert.equal((await request(`/api/products/${product.id}`)).data.stock, 3);
+
+      const next = await createOrder();
+      for (const status of ["confirmed", "shipping", "completed"]) {
+        assert.equal((await request(`/api/orders/${next.id}`, { method: "PUT", cookie: adminCookie,
+          body: { status } })).response.status, 200);
+        assert.equal((await request(`/api/orders/${next.id}/cancel`, {
+          ...cancel, cookie: customerCookie })).response.status, 409);
+        assert.equal((await request(`/api/orders/${next.id}`, { cookie: customerCookie })).data.status, status);
+        assert.equal((await request(`/api/products/${product.id}`)).data.stock, 2);
+      }
+
+      const racing = await createOrder();
+      const results = await Promise.all([
+        request(`/api/orders/${racing.id}/cancel`, { ...cancel, cookie: customerCookie }),
+        request(`/api/orders/${racing.id}`, { method: "PUT", cookie: adminCookie, body: { status: "confirmed" } }),
+      ]);
+      const latest = (await request(`/api/orders/${racing.id}`, { cookie: customerCookie })).data;
+      assert.equal(results.filter((result) => result.response.status === 200).length, 1);
+      assert.ok(["confirmed", "cancelled"].includes(latest.status));
+      assert.equal((await request(`/api/products/${product.id}`)).data.stock, latest.status === "cancelled" ? 2 : 1);
+      if (latest.status === "confirmed") {
+        assert.equal((await request(`/api/orders/${racing.id}`, { method: "PUT", cookie: adminCookie,
+          body: { status: "cancelled" } })).response.status, 200);
+      }
+      assert.equal((await request("/api/orders/invalid/cancel", { ...cancel, cookie: customerCookie })).response.status, 400);
+      assert.equal((await request(`/api/orders/${Number.MAX_SAFE_INTEGER}/cancel`, {
+        ...cancel, cookie: customerCookie })).response.status, 404);
+      assert.equal((await request(`/api/products/${product.id}`, { method: "DELETE", cookie: adminCookie })).response.status, 200);
+    });
+
     await t.test("deleted highest product IDs are never reused, even after an invalid create", async () => {
       const first = await createStockTestProduct("Deleted highest ID");
       const remove = { method: "DELETE", cookie: adminCookie };

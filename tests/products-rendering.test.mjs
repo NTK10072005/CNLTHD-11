@@ -34,6 +34,7 @@ async function renderPage(file, { data = null, status = "success", error = null,
     useAsyncData: async () => ({ data: ref(data), status: ref(status), error: ref(error), refresh: async () => {} }),
     useRequestFetch: () => async () => data,
     useAuth: () => ({ user: ref({ id: 1 }) }),
+    useShopData: () => ({ refreshOrders: async () => {}, refreshProducts: async () => {} }),
     useHead: () => {},
     useFormatPrice: () => ({ formatPrice: (value) => `${value} VND` }),
     useCart: () => ({ cart: ref([]), addToCart: () => {}, triggerToast: () => {} }),
@@ -55,6 +56,17 @@ async function renderPage(file, { data = null, status = "success", error = null,
 }
 
 const detailPage = "../app/pages/products/[id].vue";
+
+test("only the owner of a pending order sees the cancellation button", async () => {
+  const order = { id: 1, userId: 1, status: "pending", total: 1000000,
+    createdAt: "2026-10-23T00:00:00Z", shippingInfo: { name: "Customer" }, items: [] };
+  for (const status of ["pending", "confirmed", "shipping", "completed", "cancelled"]) {
+    const result = await renderPage("../app/pages/orders/[id].vue", { data: { ...order, status } });
+    assert.equal(result.html.includes("Hủy đơn hàng"), status === "pending");
+  }
+  const other = await renderPage("../app/pages/orders/[id].vue", { data: { ...order, userId: 2 } });
+  assert.doesNotMatch(other.html, /Hủy đơn hàng/);
+});
 
 test("order details distinguish 401/403/404/service errors and return matching SSR status without stale data", async () => {
   const stale = { id: 1, shippingInfo: { name: "PRIVATE_STALE_ORDER" }, items: [] };
