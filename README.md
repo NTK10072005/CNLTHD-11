@@ -33,8 +33,8 @@ Website gồm hai khu vực chính:
 - Cập nhật số lượng sản phẩm trong giỏ hàng.
 - Đặt hàng và thanh toán khi nhận hàng (COD).
 - Theo dõi thông tin và trạng thái đơn hàng.
-- Thời gian đơn hàng hiển thị theo giờ Việt Nam (`Asia/Ho_Chi_Minh`), định dạng `dd/MM/yyyy HH:mm:ss`, không kèm nhãn `(UTC+7)`. API vẫn lưu thời gian theo ISO; giao diện khách hàng và quản trị dùng chung hàm định dạng.
-- Tự hủy đơn của mình khi còn **Chờ xác nhận** tại trang chi tiết đơn hàng; hệ thống hoàn lại tồn kho.
+- Thời gian đơn hàng hiển thị theo giờ Việt Nam (`Asia/Ho_Chi_Minh`), định dạng `dd/MM/yyyy HH:mm:ss`.
+- Có thể tự hủy đơn của mình khi đơn hàng còn ở trạng thái **Chờ xác nhận** tại trang chi tiết đơn hàng; hệ thống hoàn lại tồn kho.
 
 ### 3.2. Quản trị viên (Admin)
 
